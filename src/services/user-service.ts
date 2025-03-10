@@ -14,11 +14,23 @@ export interface IUser {
     refreshToken?: string,
 }
 
+const saveTokens = (accessToken: string, refreshToken: string) => {
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+  };
+  
+  const getAccessToken = () => localStorage.getItem("accessToken");
+  const getRefreshToken = () => localStorage.getItem("refreshToken");
+
 const register = (user: IUser) => {
     const abortController = new AbortController()
     const request = apiClient.post<IUser>('/auth/register',
         user,
         { signal: abortController.signal })
+        request.then((res) => {
+            if (res.data.accessToken && res.data.refreshToken) {
+              saveTokens(res.data.accessToken, res.data.refreshToken);
+            }});
     return { request, abort: () => abortController.abort() }
 }
 
@@ -60,7 +72,69 @@ const uploadImage = (img: File | null) => {
     return { request };
 };
 
+const login = (email: string, password: string) => {
+    const abortController = new AbortController();
+    const request = apiClient.post<IUser>("/auth/login", { email, password }, { signal: abortController.signal });
+    request.then((res) => {
+        if (res.data.accessToken && res.data.refreshToken) {
+          saveTokens(res.data.accessToken, res.data.refreshToken);
+        }
+      });
+    return { request, abort: () => abortController.abort() };
+};
+
+const logout = (refreshToken: string) => {
+    const abortController = new AbortController();
+    const request = apiClient.post("/auth/logout", { refreshToken }, { signal: abortController.signal });
+    request.finally(() => {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      });
+    return { request, abort: () => abortController.abort() };
+};
+
+const refresh = () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return Promise.reject("No refresh token available");
+  
+    return apiClient
+      .post("/auth/refresh", { refreshToken })
+      .then((res) => {
+        if (res.data.accessToken && res.data.refreshToken) {
+          saveTokens(res.data.accessToken, res.data.refreshToken);
+        }
+        return res.data;
+      })
+      .catch((err) => {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        throw err;
+      });
+  };
+
+const getUserById = (id: string) => {
+    const abortController = new AbortController();
+    const request = apiClient.get<IUser>(`/users/${id}`, { signal: abortController.signal });
+    return { request, abort: () => abortController.abort() };
+};
+
+const getAllUsers = () => {
+    const abortController = new AbortController();
+    const request = apiClient.get<IUser[]>("/users", { signal: abortController.signal });
+    return { request, abort: () => abortController.abort() };
+};
+
+const updateUser = (id: string, userData: Partial<IUser>) => {
+    const abortController = new AbortController();
+    const request = apiClient.put<IUser>(`/users/${id}`, userData, { signal: abortController.signal });
+    return { request, abort: () => abortController.abort() };
+};
+
+const deleteUser = (id: string) => {
+    const abortController = new AbortController();
+    const request = apiClient.delete(`/users/${id}`, { signal: abortController.signal });
+    return { request, abort: () => abortController.abort() };
+};
 
 
-
-export default { register, uploadImage, googleSignIn }
+export default { register, uploadImage, googleSignIn, login, logout, refresh, getUserById, getAllUsers, updateUser, deleteUser, getAccessToken, getRefreshToken };
