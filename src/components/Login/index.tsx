@@ -36,10 +36,10 @@ export const Login: FC = () => {
             alignItems:'center' }}>
              <div className='d-flex flex-column ' style={{width:'60%',backgroundColor:'lightblue',padding:'20px',borderRadius:'10px'}}>
             <h1 style ={{ display:'flex', justifyContent:'center'}}>Login</h1>
-            <label>Email:</label>
+            <label>email:</label>
             <input type="email" className="mb-3" {...register("email")} required />
             
-            <label>Mot de passe:</label>
+            <label>password:</label>
             <input type="password" className="mb-3" {...register("password")} required />
             
             <button type="submit">Login</button>
