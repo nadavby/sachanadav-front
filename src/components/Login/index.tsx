@@ -1,6 +1,8 @@
+/** @format */
+
 import { FC } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import userService from "../../services/user-service";
 
 type FormData = {
@@ -10,6 +12,7 @@ type FormData = {
 
 export const Login: FC = () => {
   const { register, handleSubmit } = useForm<FormData>();
+  const navigate = useNavigate();
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -18,6 +21,8 @@ export const Login: FC = () => {
 
       if (response.data.accessToken && response.data.refreshToken) {
         console.log("Login success :", response.data);
+
+        navigate("/posts");
       }
     } catch (error) {
       console.error(error);
@@ -34,8 +39,8 @@ export const Login: FC = () => {
           height: "100vh",
           justifyContent: "center",
           alignItems: "center",
-        }}
-      >
+
+        }}>
         <div
           className="d-flex flex-column "
           style={{
@@ -43,10 +48,11 @@ export const Login: FC = () => {
             backgroundColor: "lightblue",
             padding: "20px",
             borderRadius: "10px",
-          }}
-        >
+
+          }}>
           <h1 style={{ display: "flex", justifyContent: "center" }}>Login</h1>
-          <label>email:</label>
+          <label>Email:</label>
+
           <input
             type="email"
             className="mb-3"
