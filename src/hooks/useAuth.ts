@@ -60,5 +60,5 @@ export const useAuth = () => {
     checkAuthState();
   }, [checkAuthState]);
 
-  return { currentUser, loading, isAuthenticated: !!currentUser, updateAuthState: checkAuthState, logout };
+  return { currentUser, loading, isAuthenticated: currentUser, updateAuthState: checkAuthState, logout };
 };
