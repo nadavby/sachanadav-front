@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import { Login } from "./Login";
 import { RegistrationForm } from "./RegristrationForm";
 import PostList from "./PostList";
+import UserProfile from "./UserProfile";
 
 function App() {
   return (
@@ -24,6 +25,10 @@ function App() {
         <Route
           path="/posts"
           element={<PostList />}
+        />
+         <Route
+          path="/profile"
+          element={<UserProfile />}
         />
       </Routes>
     </>

@@ -3,6 +3,7 @@
 import { CredentialResponse } from "@react-oauth/google";
 import { apiClient, CanceledError } from "./api-client";
 import defaultImage from "../assets/avatar.png";
+import { jwtDecode } from "jwt-decode";
 
 export { CanceledError };
 
@@ -15,6 +16,12 @@ export interface IUser {
   refreshToken?: string;
 }
 
+interface DecodedToken {
+  _id: string;
+  email: string;
+  exp: number;
+}
+
 const saveTokens = (accessToken: string, refreshToken: string) => {
   localStorage.setItem("accessToken", accessToken);
   localStorage.setItem("refreshToken", refreshToken);
@@ -23,104 +30,117 @@ const saveTokens = (accessToken: string, refreshToken: string) => {
 const getAccessToken = () => localStorage.getItem("accessToken");
 const getRefreshToken = () => localStorage.getItem("refreshToken");
 
-const register = (user: IUser) => {
+const clearTokens = () => {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+};
+
+const getCurrentUser = async () => {
+  const token = getAccessToken();
+  if (!token) return null;
+
+  try {
+    const decoded = jwtDecode<DecodedToken>(token);
+    const { data } = await apiClient.get<IUser>(`/auth/${decoded._id}`);
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch current user:", error);
+    return null;
+  }
+};
+
+const register = async (user: IUser) => {
   const abortController = new AbortController();
-  const request = apiClient.post<IUser>("/auth/register", user, {
-    signal: abortController.signal,
-  });
-  request.then((res) => {
-    if (res.data.accessToken && res.data.refreshToken) {
-      saveTokens(res.data.accessToken, res.data.refreshToken);
+  try {
+    const { data } = await apiClient.post<IUser>("/auth/register", user, {
+      signal: abortController.signal,
+    });
+
+    if (data.accessToken && data.refreshToken) {
+      saveTokens(data.accessToken, data.refreshToken);
     }
-  });
-  return { request, abort: () => abortController.abort() };
+
+    return data;
+  } catch (error) {
+    console.error("Registration failed:", error);
+    throw error;
+  }
 };
 
-const googleSignIn = (credential: CredentialResponse) => {
+const googleSignIn = async (credential: CredentialResponse) => {
   const abortController = new AbortController();
-  const request = apiClient.post<IUser>("/auth/google", credential, {
-    signal: abortController.signal,
-  });
-  return { request, abort: () => abortController.abort() };
+  try {
+    const { data } = await apiClient.post<IUser>("/auth/google", credential, {
+      signal: abortController.signal,
+    });
+
+    return data;
+  } catch (error) {
+    console.error("Google Sign-In failed:", error);
+    throw error;
+  }
 };
 
-const uploadImage = (img: File | null) => {
+const uploadImage = async (img: File | null) => {
   const formData = new FormData();
   if (!img) {
-    return fetch(defaultImage)
-      .then((res) => res.blob())
-      .then((blob) => {
-        const defaultFile = new File([blob], "default.png", {
-          type: "image/png",
-        });
-        formData.append("file", defaultFile);
-
-        const request = apiClient.post("/file?file=default.png", formData, {
-          headers: {
-            "Content-Type": "image/png",
-          },
-        });
-
-        return { request };
-      });
+    const blob = await fetch(defaultImage).then((res) => res.blob());
+    const defaultFile = new File([blob], "default.png", { type: "image/png" });
+    formData.append("file", defaultFile);
+  } else {
+    formData.append("file", img);
   }
 
-  formData.append("file", img);
-  const request = apiClient.post("/file?file=" + img.name, formData, {
-    headers: {
-      "Content-Type": "image/*",
-    },
+  return apiClient.post("/file?file=" + (img?.name || "default.png"), formData, {
+    headers: { "Content-Type": "image/*" },
   });
-
-  return { request };
 };
 
-const login = (email: string, password: string) => {
+const login = async (email: string, password: string) => {
   const abortController = new AbortController();
-  const request = apiClient.post<IUser>(
-    "/auth/login",
-    { email, password },
-    { signal: abortController.signal }
-  );
-  request.then((res) => {
-    if (res.data.accessToken && res.data.refreshToken) {
-      saveTokens(res.data.accessToken, res.data.refreshToken);
+  try {
+    const { data } = await apiClient.post<IUser>(
+      "/auth/login",
+      { email, password },
+      { signal: abortController.signal }
+    );
+
+    if (data.accessToken && data.refreshToken) {
+      saveTokens(data.accessToken, data.refreshToken);
     }
-  });
-  return { request, abort: () => abortController.abort() };
+
+    return data;
+  } catch (error) {
+    console.error("Login failed:", error);
+    throw error;
+  }
 };
 
-const logout = (refreshToken: string) => {
-  const abortController = new AbortController();
-  const request = apiClient.post(
-    "/auth/logout",
-    { refreshToken },
-    { signal: abortController.signal }
-  );
-  request.finally(() => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-  });
-  return { request, abort: () => abortController.abort() };
+const logout = async () => {
+  try {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return;
+
+    await apiClient.post("/auth/logout", { refreshToken });
+
+    clearTokens();
+  } catch (error) {
+    console.error("Logout failed:", error);
+  }
 };
 
-const refresh = () => {
+const refresh = async () => {
   const refreshToken = getRefreshToken();
-  if (!refreshToken) return Promise.reject("No refresh token available");
+  console.log("Refresh Token Retrieved:", refreshToken);
 
-  return apiClient
-    .post("/auth/refresh", { refreshToken })
-    .then((res) => {
-      if (res.data.accessToken && res.data.refreshToken) {
-        saveTokens(res.data.accessToken, res.data.refreshToken);
-      }
-      return res.data;
-    })
-    .catch((err) => {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      throw err;
-    });
+  if (!refreshToken) {
+    console.error("No refresh token found!");
+    throw new Error("No refresh token available.");
+  }
+    const { data } = await apiClient.post("/auth/refresh", { refreshToken: refreshToken });
+    console.log("New Tokens:", data);
+    saveTokens(data.accessToken, data.refreshToken);
+    return data;
 };
 
 const getUserById = (id: string) => {
@@ -138,7 +158,6 @@ const getAllUsers = () => {
   });
   return { request, abort: () => abortController.abort() };
 };
-
 const updateUser = (id: string, userData: Partial<IUser>) => {
   const abortController = new AbortController();
   const request = apiClient.put<IUser>(`/users/${id}`, userData, {
@@ -164,8 +183,12 @@ export default {
   refresh,
   getUserById,
   getAllUsers,
+  clearTokens,
   updateUser,
   deleteUser,
+  saveTokens,
   getAccessToken,
   getRefreshToken,
+  getCurrentUser,
 };
+

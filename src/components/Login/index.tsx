@@ -16,11 +16,11 @@ export const Login: FC = () => {
 
   const onSubmit = async (data: FormData) => {
     try {
-      const { request } = userService.login(data.email, data.password);
+      const  request  = userService.login(data.email, data.password);
       const response = await request;
 
-      if (response.data.accessToken && response.data.refreshToken) {
-        console.log("Login success :", response.data);
+      if (response.accessToken && response.refreshToken) {
+        console.log("Login success :", response);
 
         navigate("/posts");
       }
