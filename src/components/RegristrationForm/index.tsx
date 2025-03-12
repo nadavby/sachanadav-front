@@ -1,4 +1,3 @@
-
 import { FC, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faImage } from "@fortawesome/free-solid-svg-icons";
@@ -20,7 +19,6 @@ const schema = z.object({
 
 export const RegistrationForm: FC = () => {
   const [file, setFile] = useState<File | null>(null);
-  //const inputFileRef= useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const {
     register,
@@ -39,45 +37,44 @@ export const RegistrationForm: FC = () => {
 
   const onSubmit = async (data: formData) => {
     console.log(data);
-    const { request } = await userService.uploadImage(file as File);
-    request
-      .then((res) => {
-        console.log(res.data);
-        const user: IUser = {
-          email: data.email,
-          password: data.password,
-          imgUrl: res.data.url,
-        };
-        const { request } = userService.register(user);
-        request
-          .then((res) => {
-            console.log(res.data);
-            navigate("/login");
-          })
-          .catch((error) => {
-            console.error(error);
-          });
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+
+    try {
+      // פה אנו מציינים את טיפוס התגובה שמחזירה הפונקציה uploadImage
+      const res = await userService.uploadImage(file as File);
+      console.log(res.data); // אם צריך לגשת לנתונים
+
+      const user: IUser = {
+        email: data.email,
+        password: data.password,
+        imgUrl: res.data.url,
+      };
+
+      // כאן התגובה מ- register
+      const registerRes = await userService.register(user);
+      console.log(registerRes); // אם צריך לגשת לנתונים
+      navigate("/login");
+
+    } catch (error) {
+      console.error(error);
+    }
   };
+
   const onGoogleLoginSuccess = async (response: CredentialResponse) => {
     console.log(response);
-    const { request } = userService.googleSignIn(response);
-    request
-      .then((res) => {
-        console.log(res);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    try {
+      const googleRes = await userService.googleSignIn(response);
+      console.log(googleRes);
+    } catch (error) {
+      console.error(error);
+    }
   };
+
   const onGoogleLoginError = async () => {
     console.log("Google login failed");
   };
 
   const { ref, ...rest } = register("img");
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div
@@ -88,8 +85,8 @@ export const RegistrationForm: FC = () => {
           height: "100vh",
           justifyContent: "center",
           alignItems: "center",
-        }}>
-
+        }}
+      >
         <div
           className="d-flex flex-column "
           style={{
@@ -97,7 +94,8 @@ export const RegistrationForm: FC = () => {
             backgroundColor: "lightblue",
             padding: "20px",
             borderRadius: "10px",
-          }}>
+          }}
+        >
           <h1 style={{ alignSelf: "center" }}>Registration Form</h1>
           <img
             src={file ? URL.createObjectURL(file) : avatar}

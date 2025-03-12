@@ -23,16 +23,14 @@ const getAll = <T>(endpoint: string) => {
 };
 
 const likePost = async (postId: string) => {
-  const token = localStorage.getItem("refreshToken"); // Get token from storage (or context if applicable)
-  
+  const token = localStorage.getItem("refreshToken"); 
   if (!token) {
     console.error("No authentication token found");
     return Promise.reject("Unauthorized: No token found");
   }
-
   return apiClient.post(
     `/posts/${postId}/like`,
-    {}, // Empty request body
+    {}, 
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -41,5 +39,18 @@ const likePost = async (postId: string) => {
   );
 };
 
+const createPost = async (formData: FormData) => {
+  const token = localStorage.getItem("refreshToken");
+  if (!token) {
+    console.error("No authentication token found");
+    return Promise.reject("Unauthorized: No token found");
+  }
+  return apiClient.post("/posts", formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
 
-export default { getAll, likePost };
+export default { getAll, likePost, createPost };

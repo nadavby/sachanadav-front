@@ -2,10 +2,9 @@ import { FC } from "react";
 import { usePosts } from "../../hooks/usePost";
 import { useAuth } from "../../hooks/useAuth";
 import { Post } from "../../services/post-service";
-import { apiClient } from "../../services/api-client";
 import { useNavigate, Navigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faSignInAlt, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faSignInAlt, faThumbsUp, faPlus } from "@fortawesome/free-solid-svg-icons";
 import postService from "../../services/post-service";
 
 const ListPosts: FC = () => {
@@ -16,12 +15,6 @@ const ListPosts: FC = () => {
   if (!authLoading && !isAuthenticated) {
     return <Navigate to="/login" />;
   }
-
-  const getImageUrl = (imagePath: string) => {
-    if (!imagePath) return "";
-    if (imagePath.startsWith("http")) return imagePath;
-    return `${apiClient.defaults.baseURL}${imagePath}`;
-  };
   
   const user = currentUser;
   const handleLike = async (postId: string) => {
@@ -31,19 +24,18 @@ const ListPosts: FC = () => {
     }
   
     try {
-      await postService.likePost(postId); // Backend handles like/unlike
+      await postService.likePost(postId);
   
       setPosts((prevPosts: Post[]) =>
         prevPosts.map((post) => {
           if (post._id === postId) {
-            // Check if user has already liked the post
             const hasLiked = user._id ? post.likes.includes(user._id) : false;
   
             return {
               ...post,
               likes: hasLiked
-                ? post.likes.filter((id) => id !== user._id) // Unlike (remove user ID)
-                : [...post.likes, user._id], // Like (add user ID)
+                ? post.likes.filter((id) => id !== user._id)
+                : [...post.likes, user._id],
             } as Post;
           }
           return post;
@@ -55,16 +47,16 @@ const ListPosts: FC = () => {
   };
   
   return (
-    <div>
-      <div className="d-flex justify-content-end mb-3">
+    <div className="container mt-3">
+      <div className="d-flex justify-content-between mb-3">
         {!authLoading && (
           isAuthenticated ? (
-            <button className="btn btn-outline-primary me-3" onClick={() => navigate("/profile")}>
+            <button className="btn btn-outline-primary" onClick={() => navigate("/profile")}>
               <FontAwesomeIcon icon={faUser} className="me-2" />
               My Profile
             </button>
           ) : (
-            <button className="btn btn-outline-secondary me-3" onClick={() => navigate("/login")}>
+            <button className="btn btn-outline-secondary" onClick={() => navigate("/login")}>
               <FontAwesomeIcon icon={faSignInAlt} className="me-2" />
               Login
             </button>
@@ -79,12 +71,12 @@ const ListPosts: FC = () => {
       {posts.length > 0 && (
         <div className="row">
           {posts.map((post: Post) => (
-            <div key={post._id} className="row-mb-4">
-              <div className="card m-3 shadow-sm">
-                <div className="card-body">
+            <div key={post._id} className="col-md-6 col-lg-4 mb-4">
+              <div className="card shadow-sm h-100">
+                <div className="card-body d-flex flex-column">
                   <h5 className="card-title">{post.title}</h5>
-                  {post.image && <img src={getImageUrl(post.image)} alt={post.title} style={{ width: "10%", marginTop: 10 }} />}
-                  <p className="card-text">{post.content}</p>
+                  <p className="card-text flex-grow-1">{post.content}</p>
+                  {post.image && <img src={post.image} alt={post.title} className="img-fluid my-2" style={{ height: "200px", objectFit: "cover" }} />}
                   <p className="text-muted">Author: {post.owner}</p>
                   <div className="d-flex align-items-center">
                     <p className="text-success me-2 mb-0">{post.likes.length} Likes</p>
@@ -105,6 +97,13 @@ const ListPosts: FC = () => {
 
       <button className="btn btn-primary m-3" onClick={() => setPosts([...posts])}>
         Refresh
+      </button>
+
+      <button 
+        className="btn btn-success position-fixed bottom-0 end-0 m-3" 
+        onClick={() => navigate("/create-post")}
+      >
+        <FontAwesomeIcon icon={faPlus} className="me-2" /> Add Post
       </button>
     </div>
   );

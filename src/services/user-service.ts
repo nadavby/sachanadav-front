@@ -145,7 +145,7 @@ const refresh = async () => {
 
 const getUserById = (id: string) => {
   const abortController = new AbortController();
-  const request = apiClient.get<IUser>(`/users/${id}`, {
+  const request = apiClient.get<IUser>(`/auth/${id}`, {
     signal: abortController.signal,
   });
   return { request, abort: () => abortController.abort() };
@@ -153,14 +153,14 @@ const getUserById = (id: string) => {
 
 const getAllUsers = () => {
   const abortController = new AbortController();
-  const request = apiClient.get<IUser[]>("/users", {
+  const request = apiClient.get<IUser[]>("/auth", {
     signal: abortController.signal,
   });
   return { request, abort: () => abortController.abort() };
 };
 const updateUser = (id: string, userData: Partial<IUser>) => {
   const abortController = new AbortController();
-  const request = apiClient.put<IUser>(`/users/${id}`, userData, {
+  const request = apiClient.put<IUser>(`/auth/${id}`, userData, {
     signal: abortController.signal,
   });
   return { request, abort: () => abortController.abort() };
@@ -168,7 +168,7 @@ const updateUser = (id: string, userData: Partial<IUser>) => {
 
 const deleteUser = (id: string) => {
   const abortController = new AbortController();
-  const request = apiClient.delete(`/users/${id}`, {
+  const request = apiClient.delete(`/auth/${id}`, {
     signal: abortController.signal,
   });
   return { request, abort: () => abortController.abort() };

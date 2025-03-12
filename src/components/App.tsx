@@ -5,6 +5,7 @@ import { Login } from "./Login";
 import { RegistrationForm } from "./RegristrationForm";
 import PostList from "./PostList";
 import UserProfile from "./UserProfile";
+import CreatePost from "./CreatePost";
 
 function App() {
   return (
@@ -29,6 +30,10 @@ function App() {
          <Route
           path="/profile"
           element={<UserProfile />}
+        />
+        <Route
+          path="/create-post"
+          element={<CreatePost />}
         />
       </Routes>
     </>
