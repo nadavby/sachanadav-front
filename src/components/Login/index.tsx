@@ -13,18 +13,22 @@ type FormData = {
 export const Login: FC = () => {
   const { register, handleSubmit } = useForm<FormData>();
   const navigate = useNavigate();
+
   const onSubmit = async (data: FormData) => {
     try {
-      const  request  = userService.login(data.email, data.password);
+      const request = userService.login(data.email, data.password);
       const response = await request;
+
       if (response.accessToken && response.refreshToken) {
         console.log("Login success :", response);
+
         navigate("/posts");
       }
     } catch (error) {
       console.error(error);
     }
   };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div
@@ -46,12 +50,14 @@ export const Login: FC = () => {
           }}>
           <h1 style={{ display: "flex", justifyContent: "center" }}>Login</h1>
           <label>Email:</label>
+
           <input
             type="email"
             className="mb-3"
             {...register("email")}
             required
           />
+
           <label>password:</label>
           <input
             type="password"
@@ -59,6 +65,7 @@ export const Login: FC = () => {
             {...register("password")}
             required
           />
+
           <button type="submit">Login</button>
           <p style={{ textAlign: "center" }}>
             <Link to="/register">Registration Form</Link>

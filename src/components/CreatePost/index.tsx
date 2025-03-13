@@ -1,3 +1,5 @@
+/** @format */
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -20,7 +22,7 @@ const CreatePost = () => {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("content", content);
-    if(currentUser._id) formData.append("userId", currentUser._id);
+    if (currentUser._id) formData.append("userId", currentUser._id);
     if (image) formData.append("image", image);
     try {
       const response = await postService.createPost(formData);
@@ -38,17 +40,36 @@ const CreatePost = () => {
       <form onSubmit={handleSubmit}>
         <div className="mb-3">
           <label className="form-label">Title</label>
-          <input type="text" className="form-control" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <input
+            type="text"
+            className="form-control"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
         </div>
         <div className="mb-3">
           <label className="form-label">Content</label>
-          <textarea className="form-control" value={content} onChange={(e) => setContent(e.target.value)} required />
+          <textarea
+            className="form-control"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            required
+          />
         </div>
         <div className="mb-3">
           <label className="form-label">Image</label>
-          <input type="file" className="form-control" onChange={(e) => setImage(e.target.files?.[0] || null)} />
+          <input
+            type="file"
+            className="form-control"
+            onChange={(e) => setImage(e.target.files?.[0] || null)}
+          />
         </div>
-        <button type="submit" className="btn btn-primary">Submit</button>
+        <button
+          type="submit"
+          className="btn btn-primary">
+          Submit
+        </button>
       </form>
     </div>
   );
