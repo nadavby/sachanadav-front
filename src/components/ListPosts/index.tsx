@@ -1,6 +1,6 @@
 /** @format */
 
-import { FC} from "react";
+import { FC } from "react";
 import { usePosts } from "../../hooks/usePost";
 import { useAuth } from "../../hooks/useAuth";
 import { Post } from "../../services/post-service";
@@ -12,6 +12,8 @@ import {
   faSignInAlt,
   faThumbsUp,
   faPlus,
+  faEdit,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import postService from "../../services/post-service";
 
@@ -25,6 +27,7 @@ const ListPosts: FC = () => {
   }
 
   const user = currentUser;
+
   const handleLike = async (postId: string) => {
     if (!user || typeof user._id !== "string") {
       console.error("User is not valid:", user);
@@ -33,7 +36,6 @@ const ListPosts: FC = () => {
 
     try {
       await postService.likePost(postId);
-
       setPosts((prevPosts: Post[]) =>
         prevPosts.map((post) => {
           if (post._id === postId) {
@@ -54,7 +56,18 @@ const ListPosts: FC = () => {
     }
   };
 
-  console.log(posts)
+  const handleDelete = async (postId: string) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      await postService.deletePost(postId);
+      setPosts((prevPosts: Post[]) =>
+        prevPosts.filter((post) => post._id !== postId)
+      );
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
 
   return (
     <div className="container mt-3">
@@ -67,7 +80,7 @@ const ListPosts: FC = () => {
               <FontAwesomeIcon
                 icon={faUser}
                 className="me-2"
-              />
+              />{" "}
               My Profile
             </button>
           ) : (
@@ -77,7 +90,7 @@ const ListPosts: FC = () => {
               <FontAwesomeIcon
                 icon={faSignInAlt}
                 className="me-2"
-              />
+              />{" "}
               Login
             </button>
           ))}
@@ -109,29 +122,60 @@ const ListPosts: FC = () => {
                   )}
                   <p className="text-muted">Author: {post.owner}</p>
                   <div className="text-muted mb-3">
-                  Comments:  {post.comments.length}  
-                  <FontAwesomeIcon icon={faComment} className="ms-2 cursor-pointer" onClick={() => {navigate("/comments", { state: { comments: post.comments ,postId:post._id }});}}/>
-                  
+                    Comments: {post.comments.length}
+                    <FontAwesomeIcon
+                      icon={faComment}
+                      className="ms-2 cursor-pointer"
+                      onClick={() =>
+                        navigate("/comments", {
+                          state: { comments: post.comments, postId: post._id },
+                        })
+                      }
+                    />
                   </div>
-                  <div className="d-flex align-items-center">
-                    <p className="text-success me-2 mb-0">
-                      {post.likes.length} Likes
-                    </p>
-                    <button
-                      className={`btn ${
-                        user?._id && post.likes.includes(user._id)
-                          ? "btn-danger"
-                          : "btn-outline-primary"
-                      }`}
-                      onClick={() => handleLike(post._id)}>
-                      <FontAwesomeIcon
-                        icon={faThumbsUp}
-                        className="me-2"
-                      />
-                      {user?._id && post.likes.includes(user._id)
-                        ? "Unlike"
-                        : "Like"}
-                    </button>
+                  <div className="d-flex align-items-center justify-content-between">
+                    <div>
+                      <p className="text-success me-2 mb-0">
+                        {post.likes.length} Likes
+                      </p>
+                      <button
+                        className={`btn ${
+                          user?._id && post.likes.includes(user._id)
+                            ? "btn-danger"
+                            : "btn-outline-primary"
+                        }`}
+                        onClick={() => handleLike(post._id)}>
+                        <FontAwesomeIcon
+                          icon={faThumbsUp}
+                          className="me-2"
+                        />
+                        {user?._id && post.likes.includes(user._id)
+                          ? "Unlike"
+                          : "Like"}
+                      </button>
+                    </div>
+                    {user?._id === post.owner && (
+                      <div>
+                        <button
+                          className="btn btn-warning me-2"
+                          onClick={() => navigate(`/update-post/${post._id}`)}>
+                          <FontAwesomeIcon
+                            icon={faEdit}
+                            className="me-2"
+                          />{" "}
+                          Update
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => handleDelete(post._id)}>
+                          <FontAwesomeIcon
+                            icon={faTrash}
+                            className="me-2"
+                          />{" "}
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -145,7 +189,6 @@ const ListPosts: FC = () => {
         onClick={() => setPosts([...posts])}>
         Refresh
       </button>
-
       <button
         className="btn btn-success position-fixed bottom-0 end-0 m-3"
         onClick={() => navigate("/create-post")}>

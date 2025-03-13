@@ -7,6 +7,7 @@ import PostList from "./ListPosts";
 import UserProfile from "./UserProfile";
 import CreatePost from "./CreatePost";
 import ListComments from "./ListComments";
+import UpdatePost from "./UpdatePost";
 
 function App() {
   return (
@@ -39,8 +40,15 @@ function App() {
         <Route
           path="/comments"
           element={<ListComments />}
+  
+        />
+        <Route
+          path="/update-post/:postId"
+          element={<UpdatePost />}
+  
         />
       </Routes>
+
     </>
   );
 }

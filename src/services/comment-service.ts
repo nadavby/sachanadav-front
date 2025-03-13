@@ -32,7 +32,12 @@ const updateById = async (id: string, updateData: Partial<Comment>) => {
     console.error("No authentication token found");
     return Promise.reject("Unauthorized: No token found");
   }
-  const response = await apiClient.put(`/comments/${id}`, updateData);
+  const response = await apiClient.put(`/comments/${id}`, updateData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
   return response.data;
 };
 
@@ -42,7 +47,11 @@ const deleteById = async (id: string) => {
     console.error("No authentication token found");
     return Promise.reject("Unauthorized: No token found");
   }
-  await apiClient.delete(`/comments/${id}`);
+  await apiClient.delete(`/comments/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };
 
 export default { create, updateById, deleteById };
