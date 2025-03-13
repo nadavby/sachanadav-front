@@ -5,7 +5,7 @@ import { usePosts } from "../../hooks/usePost";
 import { Post } from "../../services/post-service";
 import userService from "../../services/user-service";
 import defaultAvatar from "../../assets/avatar.png";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 
 const UserProfile: FC = () => {
   const { currentUser, updateAuthState, isAuthenticated, loading } = useAuth();
@@ -18,6 +18,7 @@ const UserProfile: FC = () => {
   const [emailError, setEmailError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
   const [isSaved, setIsSaved] = useState(false);
+  const navigate = useNavigate();
 
   // כש-`currentUser` משתנה, מעדכנים את הסטייטים של המייל והסיסמה
   useEffect(() => {
@@ -25,14 +26,18 @@ const UserProfile: FC = () => {
       setEmail(currentUser.email);
       setPassword(""); // את הסיסמה נמחק בכל פעם שמבצעים את העדכון
     }
-  }, [isSaved] );
+  }, [isSaved]);
 
   if (!loading && !isAuthenticated) return <Navigate to="/login" />;
   if (!currentUser) return <div>Loading...</div>;
 
-  const userPosts = posts.filter((post: Post) => post.owner === currentUser._id);
+  const userPosts = posts.filter(
+    (post: Post) => post.owner === currentUser._id
+  );
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -77,6 +82,25 @@ const UserProfile: FC = () => {
 
     return isValid;
   };
+  const handleLogoutClick = async () => {
+    try {
+      if (!currentUser || !currentUser._id) return;
+      await userService.logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Failed to logout user details:", error);
+    }
+  };
+  const handleDeleteClick = async () => {
+    try {
+      if (!currentUser || !currentUser._id) return;
+      await userService.deleteUser(currentUser._id);
+      
+      navigate("/login");
+    } catch (error) {
+      console.error("Failed to delete user details:", error);
+    }
+  };
 
   const handleSaveClick = async () => {
     if (!validateFields()) return;
@@ -90,7 +114,10 @@ const UserProfile: FC = () => {
       };
 
       // עדכון פרטי המשתמש בשרת
-      const data = await userService.updateUser(currentUser._id, updatedUserData);
+      const data = await userService.updateUser(
+        currentUser._id,
+        updatedUserData
+      );
       setIsSaved(true);
       // אם ההעדכון הצליח, נשמור את השינויים ונוודא שה-authState מעודכן
       if (data) {
@@ -114,15 +141,34 @@ const UserProfile: FC = () => {
               style={{ width: "120px", height: "120px", cursor: "pointer" }}
               onClick={() => fileInputRef.current?.click()}
             />
-            <input ref={fileInputRef} type="file" className="d-none" accept="image/*" onChange={handleFileChange} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="d-none"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
             {isUploading && <p className="text-primary mt-2">Uploading...</p>}
           </div>
           <div className="col-md-9">
             {!isEditing ? (
               <>
-                <p><strong>Email:</strong> {currentUser.email}</p>
-                <p><strong>Password:</strong> ********</p>
-                <button onClick={handleEditClick} className="btn btn-primary">Edit</button>
+                <p>
+                  <strong>Email:</strong> {currentUser.email}
+                </p>
+                <p>
+                  <strong>Password:</strong> ********
+                </p>
+                <button
+                  onClick={handleEditClick}
+                  className="btn btn-primary pe-3 me-2">
+                  Edit
+                </button>
+                <button
+                  onClick={handleDeleteClick}
+                  className="btn btn-danger">
+                  Delete
+                </button>
               </>
             ) : (
               <>
@@ -145,16 +191,30 @@ const UserProfile: FC = () => {
                     className="form-control"
                     placeholder="Enter new password"
                   />
-                  {passwordError && <p className="text-danger">{passwordError}</p>}
+                  {passwordError && (
+                    <p className="text-danger">{passwordError}</p>
+                  )}
                 </div>
-                <button onClick={handleSaveClick} className="btn btn-success me-2">Save</button>
-                <button onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancel</button>
+                <button
+                  onClick={handleSaveClick}
+                  className="btn btn-success me-2">
+                  Save
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="btn btn-secondary">
+                  Cancel
+                </button>
               </>
             )}
           </div>
         </div>
       </div>
-
+      <button
+        onClick={handleLogoutClick}
+        className="btn btn-dark">
+        Logout
+      </button>
       <div className="mt-4">
         <h3>My Posts</h3>
         {userPosts.length === 0 ? (
@@ -162,10 +222,18 @@ const UserProfile: FC = () => {
         ) : (
           <div className="row">
             {userPosts.map((post) => (
-              <div key={post._id} className="col-md-4 mb-3">
+              <div
+                key={post._id}
+                className="col-md-4 mb-3">
                 <div className="card p-3">
                   <h5>{post.title}</h5>
-                  {post.image && <img src={post.image} alt={post.title} className="img-fluid my-2" />}
+                  {post.image && (
+                    <img
+                      src={post.image}
+                      alt={post.title}
+                      className="img-fluid my-2"
+                    />
+                  )}
                   <p>{post.content}</p>
                   <p className="text-success">{post.likes.length} Likes</p>
                 </div>

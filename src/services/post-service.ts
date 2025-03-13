@@ -8,9 +8,9 @@ export type Post = {
     content: string,
     owner: string,
     image: string,
-    likes:string[],
+    likes: string[],
     comments: string[],
-  }
+};
 
 const getAll = <T>(endpoint: string) => {
   const abortController = new AbortController();
@@ -21,6 +21,10 @@ const getAll = <T>(endpoint: string) => {
     abort: () => abortController.abort(),
     request,
   };
+};
+
+const getPostById = async (postId: string) => {
+  return apiClient.get<Post>(`/posts/${postId}`);
 };
 
 const likePost = async (postId: string) => {
@@ -54,4 +58,31 @@ const createPost = async (formData: FormData) => {
   });
 };
 
-export default { getAll, likePost, createPost };
+const updatePost = async (postId: string, formData: FormData) => {
+  const token = localStorage.getItem("refreshToken");
+  if (!token) {
+    console.error("No authentication token found");
+    return Promise.reject("Unauthorized: No token found");
+  }
+  return apiClient.put(`/posts/${postId}`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+const deletePost = async (postId: string) => {
+  const token = localStorage.getItem("refreshToken");
+  if (!token) {
+    console.error("No authentication token found");
+    return Promise.reject("Unauthorized: No token found");
+  }
+  return apiClient.delete(`/posts/${postId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+export default { getAll, getPostById, likePost, createPost, updatePost, deletePost };
