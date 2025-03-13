@@ -1,3 +1,5 @@
+/** @format */
+
 import { FC, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faImage } from "@fortawesome/free-solid-svg-icons";
@@ -39,21 +41,17 @@ export const RegistrationForm: FC = () => {
     console.log(data);
 
     try {
-      // פה אנו מציינים את טיפוס התגובה שמחזירה הפונקציה uploadImage
       const res = await userService.uploadImage(file as File);
-      console.log(res.data); // אם צריך לגשת לנתונים
-
+      console.log(res.data);
       const user: IUser = {
         email: data.email,
         password: data.password,
         imgUrl: res.data.url,
       };
 
-      // כאן התגובה מ- register
       const registerRes = await userService.register(user);
-      console.log(registerRes); // אם צריך לגשת לנתונים
+      console.log(registerRes);
       navigate("/login");
-
     } catch (error) {
       console.error(error);
     }
@@ -85,8 +83,7 @@ export const RegistrationForm: FC = () => {
           height: "100vh",
           justifyContent: "center",
           alignItems: "center",
-        }}
-      >
+        }}>
         <div
           className="d-flex flex-column "
           style={{
@@ -94,8 +91,7 @@ export const RegistrationForm: FC = () => {
             backgroundColor: "lightblue",
             padding: "20px",
             borderRadius: "10px",
-          }}
-        >
+          }}>
           <h1 style={{ alignSelf: "center" }}>Registration Form</h1>
           <img
             src={file ? URL.createObjectURL(file) : avatar}

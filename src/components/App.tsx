@@ -3,9 +3,10 @@
 import { Routes, Route } from "react-router-dom";
 import { Login } from "./Login";
 import { RegistrationForm } from "./RegristrationForm";
-import PostList from "./PostList";
+import PostList from "./ListPosts";
 import UserProfile from "./UserProfile";
 import CreatePost from "./CreatePost";
+import ListComments from "./ListComments";
 
 function App() {
   return (
@@ -34,6 +35,10 @@ function App() {
         <Route
           path="/create-post"
           element={<CreatePost />}
+        />
+        <Route
+          path="/comments"
+          element={<ListComments />}
         />
       </Routes>
     </>

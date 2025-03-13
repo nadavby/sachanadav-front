@@ -9,6 +9,7 @@ export type Post = {
     owner: string,
     image: string,
     likes:string[],
+    comments: string[],
   }
 
 const getAll = <T>(endpoint: string) => {
