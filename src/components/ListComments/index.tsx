@@ -1,5 +1,3 @@
-/** @format */
-
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -88,6 +86,8 @@ const ListComments = () => {
     try {
       const updatedComment = await commentService.updateById(commentId, {
         content: editContent,
+        postId,
+        owner: currentUser._id,
       });
       setComments(
         comments.map((comment) =>

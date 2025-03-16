@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import postService from "../../services/post-service";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 
 const CreatePost = () => {
   const [title, setTitle] = useState("");
@@ -34,6 +36,16 @@ const CreatePost = () => {
     }
   };
   return (
+    <div className="container mt-4">
+            <button
+              className="btn btn-outline-primary mb-3"
+              onClick={() => navigate(-1)}>
+              <FontAwesomeIcon
+                icon={faArrowLeft}
+                className="me-2"
+              />{" "}
+              Back
+            </button>
     <div className="container mt-4">
       <h2>Create New Post</h2>
       {error && <p className="alert alert-danger">{error}</p>}
@@ -71,6 +83,7 @@ const CreatePost = () => {
           Submit
         </button>
       </form>
+    </div>
     </div>
   );
 };

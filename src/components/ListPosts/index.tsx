@@ -77,21 +77,13 @@ const ListPosts: FC = () => {
             <button
               className="btn btn-outline-primary"
               onClick={() => navigate("/profile")}>
-              <FontAwesomeIcon
-                icon={faUser}
-                className="me-2"
-              />{" "}
-              My Profile
+              <FontAwesomeIcon icon={faUser} className="me-2" /> My Profile
             </button>
           ) : (
             <button
               className="btn btn-outline-secondary"
               onClick={() => navigate("/login")}>
-              <FontAwesomeIcon
-                icon={faSignInAlt}
-                className="me-2"
-              />{" "}
-              Login
+              <FontAwesomeIcon icon={faSignInAlt} className="me-2" /> Login
             </button>
           ))}
       </div>
@@ -105,9 +97,7 @@ const ListPosts: FC = () => {
       {posts.length > 0 && (
         <div className="row">
           {posts.map((post: Post) => (
-            <div
-              key={post._id}
-              className="col-md-6 col-lg-4 mb-4">
+            <div key={post._id} className="col-md-6 col-lg-4 mb-4">
               <div className="card shadow-sm h-100">
                 <div className="card-body d-flex flex-column">
                   <h5 className="card-title">{post.title}</h5>
@@ -121,62 +111,42 @@ const ListPosts: FC = () => {
                     />
                   )}
                   <p className="text-muted">Author: {post.owner}</p>
-                  <div className="text-muted mb-3">
-                    Comments: {post.comments.length}
-                    <FontAwesomeIcon
-                      icon={faComment}
-                      className="ms-2 cursor-pointer"
+                  <div className="d-flex align-items-center gap-3">
+                    <button
+                      className={`btn d-flex align-items-center gap-2 ${
+                        user?._id && post.likes.includes(user._id)
+                          ? "btn-danger"
+                          : "btn-outline-primary"
+                      }`}
+                      onClick={() => handleLike(post._id)}>
+                      <FontAwesomeIcon icon={faThumbsUp} />
+                      {post.likes.length}
+                    </button>
+                    <button
+                      className="btn btn-outline-secondary d-flex align-items-center gap-2"
                       onClick={() =>
                         navigate("/comments", {
                           state: { comments: post.comments, postId: post._id },
                         })
-                      }
-                    />
+                      }>
+                      <FontAwesomeIcon icon={faComment} />
+                      {post.comments.length}
+                    </button>
                   </div>
-                  <div className="d-flex align-items-center justify-content-between">
-                    <div>
-                      <p className="text-success me-2 mb-0">
-                        {post.likes.length} Likes
-                      </p>
+                  {user?._id === post.owner && (
+                    <div className="mt-3 d-flex gap-2">
                       <button
-                        className={`btn ${
-                          user?._id && post.likes.includes(user._id)
-                            ? "btn-danger"
-                            : "btn-outline-primary"
-                        }`}
-                        onClick={() => handleLike(post._id)}>
-                        <FontAwesomeIcon
-                          icon={faThumbsUp}
-                          className="me-2"
-                        />
-                        {user?._id && post.likes.includes(user._id)
-                          ? "Unlike"
-                          : "Like"}
+                        className="btn btn-warning"
+                        onClick={() => navigate(`/update-post/${post._id}`)}>
+                        <FontAwesomeIcon icon={faEdit} className="me-2" /> Update
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => handleDelete(post._id)}>
+                        <FontAwesomeIcon icon={faTrash} className="me-2" /> Delete
                       </button>
                     </div>
-                    {user?._id === post.owner && (
-                      <div>
-                        <button
-                          className="btn btn-warning me-2"
-                          onClick={() => navigate(`/update-post/${post._id}`)}>
-                          <FontAwesomeIcon
-                            icon={faEdit}
-                            className="me-2"
-                          />{" "}
-                          Update
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => handleDelete(post._id)}>
-                          <FontAwesomeIcon
-                            icon={faTrash}
-                            className="me-2"
-                          />{" "}
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -184,19 +154,13 @@ const ListPosts: FC = () => {
         </div>
       )}
 
-      <button
-        className="btn btn-primary m-3"
-        onClick={() => setPosts([...posts])}>
+      <button className="btn btn-primary m-3" onClick={() => setPosts([...posts])}>
         Refresh
       </button>
       <button
         className="btn btn-success position-fixed bottom-0 end-0 m-3"
         onClick={() => navigate("/create-post")}>
-        <FontAwesomeIcon
-          icon={faPlus}
-          className="me-2"
-        />{" "}
-        Add Post
+        <FontAwesomeIcon icon={faPlus} className="me-2" /> Add Post
       </button>
     </div>
   );

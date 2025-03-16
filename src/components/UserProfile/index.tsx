@@ -6,6 +6,8 @@ import { Post } from "../../services/post-service";
 import userService from "../../services/user-service";
 import defaultAvatar from "../../assets/avatar.png";
 import { Navigate, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 
 const UserProfile: FC = () => {
   const { currentUser, updateAuthState, isAuthenticated, loading } = useAuth();
@@ -20,11 +22,10 @@ const UserProfile: FC = () => {
   const [isSaved, setIsSaved] = useState(false);
   const navigate = useNavigate();
 
-  // כש-`currentUser` משתנה, מעדכנים את הסטייטים של המייל והסיסמה
   useEffect(() => {
     if (currentUser) {
       setEmail(currentUser.email);
-      setPassword(""); // את הסיסמה נמחק בכל פעם שמבצעים את העדכון
+      setPassword("");
     }
   }, [isSaved]);
 
@@ -63,25 +64,21 @@ const UserProfile: FC = () => {
 
   const validateFields = () => {
     let isValid = true;
-
-    // בדיקת תקינות המייל
     if (!email.match(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/)) {
       setEmailError("Please enter a valid email.");
       isValid = false;
     } else {
       setEmailError("");
     }
-
-    // בדיקת תקינות הסיסמה
     if (password.length < 8) {
       setPasswordError("Password must be at least 8 characters.");
       isValid = false;
     } else {
       setPasswordError("");
     }
-
     return isValid;
   };
+  
   const handleLogoutClick = async () => {
     try {
       if (!currentUser || !currentUser._id) return;
@@ -91,35 +88,30 @@ const UserProfile: FC = () => {
       console.error("Failed to logout user details:", error);
     }
   };
+  
   const handleDeleteClick = async () => {
     try {
       if (!currentUser || !currentUser._id) return;
       await userService.deleteUser(currentUser._id);
-      
       navigate("/login");
     } catch (error) {
       console.error("Failed to delete user details:", error);
     }
   };
-
+  
   const handleSaveClick = async () => {
     if (!validateFields()) return;
-
     try {
       if (!currentUser || !currentUser._id) return;
-
       const updatedUserData = {
         email,
         password,
       };
-
-      // עדכון פרטי המשתמש בשרת
       const data = await userService.updateUser(
         currentUser._id,
         updatedUserData
       );
       setIsSaved(true);
-      // אם ההעדכון הצליח, נשמור את השינויים ונוודא שה-authState מעודכן
       if (data) {
         await updateAuthState();
         setIsEditing(false);
@@ -131,6 +123,15 @@ const UserProfile: FC = () => {
 
   return (
     <div className="container mt-4">
+            <button
+              className="btn btn-outline-primary mb-3"
+              onClick={() => navigate(-1)}>
+              <FontAwesomeIcon
+                icon={faArrowLeft}
+                className="me-2"
+              />{" "}
+              Back
+            </button>
       <div className="card p-4">
         <div className="row align-items-center text-center text-md-start">
           <div className="col-md-3 text-center">
@@ -168,6 +169,11 @@ const UserProfile: FC = () => {
                   onClick={handleDeleteClick}
                   className="btn btn-danger">
                   Delete
+                </button>
+                <button
+                  onClick={handleLogoutClick}
+                  className="btn btn-secondary ms-2">
+                  Logout
                 </button>
               </>
             ) : (
@@ -210,11 +216,6 @@ const UserProfile: FC = () => {
           </div>
         </div>
       </div>
-      <button
-        onClick={handleLogoutClick}
-        className="btn btn-dark">
-        Logout
-      </button>
       <div className="mt-4">
         <h3>My Posts</h3>
         {userPosts.length === 0 ? (
@@ -227,6 +228,7 @@ const UserProfile: FC = () => {
                 className="col-md-4 mb-3">
                 <div className="card p-3">
                   <h5>{post.title}</h5>
+                  <p>{post.content}</p>
                   {post.image && (
                     <img
                       src={post.image}
@@ -234,8 +236,7 @@ const UserProfile: FC = () => {
                       className="img-fluid my-2"
                     />
                   )}
-                  <p>{post.content}</p>
-                  <p className="text-success">{post.likes.length} Likes</p>
+                  <p className="text-success"> Likes {post.likes.length} | Comments {post.comments.length}</p>
                 </div>
               </div>
             ))}
@@ -247,3 +248,4 @@ const UserProfile: FC = () => {
 };
 
 export default UserProfile;
+
