@@ -14,6 +14,7 @@ import {
   faPlus,
   faEdit,
   faTrash,
+  faRobot,
 } from "@fortawesome/free-solid-svg-icons";
 import postService from "../../services/post-service";
 
@@ -86,6 +87,11 @@ const ListPosts: FC = () => {
               <FontAwesomeIcon icon={faSignInAlt} className="me-2" /> Login
             </button>
           ))}
+        <button
+          className="btn btn-info"
+          onClick={() => navigate("/chatbot")}>
+          <FontAwesomeIcon icon={faRobot} className="me-2" /> Chatbot
+        </button>
       </div>
 
       {error && <p className="alert alert-danger">Error: {error}</p>}
