@@ -8,6 +8,7 @@ import UserProfile from "./UserProfile";
 import CreatePost from "./CreatePost";
 import ListComments from "./ListComments";
 import UpdatePost from "./UpdatePost";
+import Chatbot from "./ChatBot";
 
 function App() {
   return (
@@ -45,6 +46,11 @@ function App() {
         <Route
           path="/update-post/:postId"
           element={<UpdatePost />}
+  
+        />
+         <Route
+          path="/chatbot"
+          element={<Chatbot />}
   
         />
       </Routes>
