@@ -15,6 +15,7 @@ export type formData = z.infer<typeof schema>;
 
 const schema = z.object({
   email: z.string().email(),
+  userName: z.string().min(3, "Name must be at least 3 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   img: z.optional(z.instanceof(FileList)),
 });
@@ -45,6 +46,7 @@ export const RegistrationForm: FC = () => {
       console.log(res.data);
       const user: IUser = {
         email: data.email,
+        userName: data.userName,
         password: data.password,
         imgUrl: res.data.url,
       };
@@ -138,6 +140,17 @@ export const RegistrationForm: FC = () => {
           />
           {errors.email && (
             <p className="text-danger">{errors.email.message}</p>
+          )}
+          <label>userName:</label>
+          <input
+            {...register("userName")}
+            type="text"
+            placeholder="Enter your userName"
+            className="mb"
+            style={{ borderRadius: "5px", border: "1px" }}
+          />
+          {errors.userName && (
+            <p className="text-danger">{errors.userName.message}</p>
           )}
           <label>password:</label>
           <input

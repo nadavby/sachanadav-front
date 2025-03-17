@@ -1,4 +1,5 @@
 /** @format */
+
 import { FC, useRef, useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { usePosts } from "../../hooks/usePost";
@@ -16,25 +17,35 @@ const UserProfile: FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
+  const [userNameError, setUserNameError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
-  const [isSaved, setIsSaved] = useState(false);
+  const [localUser, setLocalUser] = useState<{
+    _id?: string;
+    email: string;
+    userName: string;
+    password?: string;
+    imgUrl?: string;
+    accessToken?: string;
+    refreshToken?: string;
+  } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (currentUser) {
       setEmail(currentUser.email);
+      setUserName(currentUser.userName || "");
       setPassword("");
+      setLocalUser({ ...currentUser });
     }
-  }, [isSaved]);
+  }, [currentUser]);
 
   if (!loading && !isAuthenticated) return <Navigate to="/login" />;
-  if (!currentUser) return <div>Loading...</div>;
+  if (!localUser) return <div>Loading...</div>;
 
-  const userPosts = posts.filter(
-    (post: Post) => post.owner === currentUser._id
-  );
+  const userPosts = posts.filter((post: Post) => post.owner === localUser._id);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -45,11 +56,22 @@ const UserProfile: FC = () => {
     setIsUploading(true);
     try {
       const { data } = await userService.uploadImage(file);
-      if (!currentUser || !currentUser._id) {
+      if (!localUser || !localUser._id) {
         console.error("User ID is missing. Cannot update user.");
         return;
       }
-      await userService.updateUser(currentUser._id, { imgUrl: data.url });
+      const { request } = userService.updateUser(localUser._id, {
+        imgUrl: data.url,
+      });
+      await request;
+      setLocalUser((prev) => {
+        if (!prev) return { email: "", userName: "", imgUrl: data.url };
+        return {
+          ...prev,
+          imgUrl: data.url,
+        };
+      });
+
       await updateAuthState();
     } catch (error) {
       console.error("Image upload failed:", error);
@@ -70,6 +92,12 @@ const UserProfile: FC = () => {
     } else {
       setEmailError("");
     }
+    if (userName.trim() === "") {
+      setUserNameError("Username cannot be empty.");
+      isValid = false;
+    } else {
+      setUserNameError("");
+    }
     if (password.length < 8) {
       setPasswordError("Password must be at least 8 characters.");
       isValid = false;
@@ -78,44 +106,54 @@ const UserProfile: FC = () => {
     }
     return isValid;
   };
-  
+
   const handleLogoutClick = async () => {
     try {
-      if (!currentUser || !currentUser._id) return;
       await userService.logout();
       navigate("/login");
     } catch (error) {
       console.error("Failed to logout user details:", error);
     }
   };
-  
+
   const handleDeleteClick = async () => {
     try {
-      if (!currentUser || !currentUser._id) return;
-      await userService.deleteUser(currentUser._id);
+      if (!localUser || !localUser._id) return;
+      const { request } = userService.deleteUser(localUser._id);
+      await request;
       navigate("/login");
     } catch (error) {
       console.error("Failed to delete user details:", error);
     }
   };
-  
+
   const handleSaveClick = async () => {
     if (!validateFields()) return;
     try {
-      if (!currentUser || !currentUser._id) return;
+      if (!localUser || !localUser._id) return;
+
       const updatedUserData = {
         email,
+        userName,
         password,
       };
-      const data = await userService.updateUser(
-        currentUser._id,
+
+      const { request } = userService.updateUser(
+        localUser._id,
         updatedUserData
       );
-      setIsSaved(true);
-      if (data) {
-        await updateAuthState();
-        setIsEditing(false);
-      }
+
+      const response = await request;
+      const updatedUser = response.data;
+
+      setLocalUser({
+        ...localUser,
+        email: updatedUser.email,
+        userName: updatedUser.userName,
+      });
+
+      setIsEditing(false);
+      await updateAuthState();
     } catch (error) {
       console.error("Failed to update user details:", error);
     }
@@ -123,20 +161,20 @@ const UserProfile: FC = () => {
 
   return (
     <div className="container mt-4">
-            <button
-              className="btn btn-outline-primary mb-3"
-              onClick={() => navigate(-1)}>
-              <FontAwesomeIcon
-                icon={faArrowLeft}
-                className="me-2"
-              />{" "}
-              Back
-            </button>
+      <button
+        className="btn btn-outline-primary mb-3"
+        onClick={() => navigate(-1)}>
+        <FontAwesomeIcon
+          icon={faArrowLeft}
+          className="me-2"
+        />{" "}
+        Back
+      </button>
       <div className="card p-4">
         <div className="row align-items-center text-center text-md-start">
           <div className="col-md-3 text-center">
             <img
-              src={currentUser.imgUrl ? currentUser.imgUrl : defaultAvatar}
+              src={localUser.imgUrl ? localUser.imgUrl : defaultAvatar}
               alt="Profile"
               className="rounded-circle img-thumbnail"
               style={{ width: "120px", height: "120px", cursor: "pointer" }}
@@ -155,7 +193,10 @@ const UserProfile: FC = () => {
             {!isEditing ? (
               <>
                 <p>
-                  <strong>Email:</strong> {currentUser.email}
+                  <strong>Username:</strong> {localUser.userName || "Not set"}
+                </p>
+                <p>
+                  <strong>Email:</strong> {localUser.email}
                 </p>
                 <p>
                   <strong>Password:</strong> ********
@@ -178,6 +219,18 @@ const UserProfile: FC = () => {
               </>
             ) : (
               <>
+                <div className="mb-3">
+                  <label className="form-label">Username:</label>
+                  <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="form-control"
+                  />
+                  {userNameError && (
+                    <p className="text-danger">{userNameError}</p>
+                  )}
+                </div>
                 <div className="mb-3">
                   <label className="form-label">Email:</label>
                   <input
@@ -236,7 +289,10 @@ const UserProfile: FC = () => {
                       className="img-fluid my-2"
                     />
                   )}
-                  <p className="text-success"> Likes {post.likes.length} | Comments {post.comments.length}</p>
+                  <p className="text-success">
+                    {" "}
+                    Likes {post.likes.length} | Comments {post.comments.length}
+                  </p>
                 </div>
               </div>
             ))}
@@ -248,4 +304,3 @@ const UserProfile: FC = () => {
 };
 
 export default UserProfile;
-

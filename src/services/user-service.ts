@@ -8,14 +8,15 @@ import { jwtDecode } from "jwt-decode";
 export { CanceledError };
 
 export interface iComment {
-    _id?: string;
-    content: string;
-    postId: string;
-    owner: string;
-  }
+  _id?: string;
+  content: string;
+  postId: string;
+  owner: string;
+}
 export interface IUser {
   _id?: string;
   email: string;
+  userName: string;
   password?: string;
   imgUrl?: string;
   accessToken?: string;
@@ -97,9 +98,13 @@ const uploadImage = async (img: File | null) => {
     formData.append("file", img);
   }
 
-  return apiClient.post("/file?file=" + (img?.name || "default.png"), formData, {
-    headers: { "Content-Type": "image/*" },
-  });
+  return apiClient.post(
+    "/file?file=" + (img?.name || "default.png"),
+    formData,
+    {
+      headers: { "Content-Type": "image/*" },
+    }
+  );
 };
 
 const login = async (email: string, password: string) => {
@@ -143,10 +148,12 @@ const refresh = async () => {
     console.error("No refresh token found!");
     throw new Error("No refresh token available.");
   }
-    const { data } = await apiClient.post("/auth/refresh", { refreshToken: refreshToken });
-    console.log("New Tokens:", data);
-    saveTokens(data.accessToken, data.refreshToken);
-    return data;
+  const { data } = await apiClient.post("/auth/refresh", {
+    refreshToken: refreshToken,
+  });
+  console.log("New Tokens:", data);
+  saveTokens(data.accessToken, data.refreshToken);
+  return data;
 };
 
 const getUserById = (id: string) => {
@@ -197,4 +204,3 @@ export default {
   getRefreshToken,
   getCurrentUser,
 };
-

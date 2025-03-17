@@ -30,7 +30,10 @@ export const useAuth = () => {
       if (decoded.exp <= currentTime) {
         console.log("Access token expired, attempting refresh.");
         const refreshResult = await userService.refresh();
-        userService.saveTokens(refreshResult.accessToken, refreshResult.refreshToken);
+        userService.saveTokens(
+          refreshResult.accessToken,
+          refreshResult.refreshToken
+        );
       }
       await fetchUserDetails();
     } catch (error) {
@@ -60,5 +63,11 @@ export const useAuth = () => {
     checkAuthState();
   }, [checkAuthState]);
 
-  return { currentUser, loading, isAuthenticated: currentUser, updateAuthState: checkAuthState, logout };
+  return {
+    currentUser,
+    loading,
+    isAuthenticated: currentUser,
+    updateAuthState: checkAuthState,
+    logout,
+  };
 };
