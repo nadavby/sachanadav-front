@@ -1,6 +1,4 @@
-/** @format */
-
-import { FC } from "react";
+import { FC, useState } from "react";
 import { usePosts } from "../../hooks/usePost";
 import { useAuth } from "../../hooks/useAuth";
 import { Post } from "../../services/post-service";
@@ -15,13 +13,19 @@ import {
   faEdit,
   faTrash,
   faRobot,
+  faSort,
+  faCaretDown,
 } from "@fortawesome/free-solid-svg-icons";
 import postService from "../../services/post-service";
+
+type SortOption = 'newest' | 'oldest' | 'mostLiked' | 'leastLiked';
 
 const ListPosts: FC = () => {
   const { posts, isLoading, error, setPosts } = usePosts();
   const { isAuthenticated, loading: authLoading, currentUser } = useAuth();
   const navigate = useNavigate();
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   if (!authLoading && !isAuthenticated) {
     return <Navigate to="/login" />;
@@ -70,6 +74,55 @@ const ListPosts: FC = () => {
     }
   };
 
+  const handleSortChange = (option: SortOption) => {
+    setSortOption(option);
+    setDropdownOpen(false);
+  };
+
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return "N/A";
+    const dateObj = date instanceof Date ? date : new Date(date);
+    return dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getSortedPosts = () => {
+    if (!posts) return [];
+    
+    const postsCopy = [...posts];
+    
+    switch (sortOption) {
+      case 'newest':
+        return postsCopy.sort((a, b) => {
+          const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0);
+          const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
+      case 'oldest':
+        return postsCopy.sort((a, b) => {
+          const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0);
+          const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0);
+          return dateA.getTime() - dateB.getTime();
+        });
+      case 'mostLiked':
+        return postsCopy.sort((a, b) => b.likes.length - a.likes.length);
+      case 'leastLiked':
+        return postsCopy.sort((a, b) => a.likes.length - b.likes.length);
+      default:
+        return postsCopy;
+    }
+  };
+
+  const sortedPosts = getSortedPosts();
+  const getSortOptionText = () => {
+    switch (sortOption) {
+      case 'newest': return 'Newest';
+      case 'oldest': return 'Oldest';
+      case 'mostLiked': return 'Most Liked';
+      case 'leastLiked': return 'Least Liked';
+      default: return 'Sort by';
+    }
+  };
+
   return (
     <div className="container mt-3">
       <div className="d-flex justify-content-between mb-3">
@@ -94,6 +147,44 @@ const ListPosts: FC = () => {
         </button>
       </div>
 
+      {/* Filter options as dropdown */}
+      <div className="mb-4 position-relative">
+        <div className="d-flex align-items-center">
+          <button 
+            className="btn btn-outline-secondary dropdown-toggle" 
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+          >
+            <FontAwesomeIcon icon={faSort} className="me-2" />
+            {getSortOptionText()}
+            <FontAwesomeIcon icon={faCaretDown} className="ms-2" />
+          </button>
+        </div>
+        {dropdownOpen && (
+          <div className="dropdown-menu show position-absolute mt-1">
+            <button 
+              className="dropdown-item"
+              onClick={() => handleSortChange('newest')}>
+              Newest
+            </button>
+            <button 
+              className="dropdown-item"
+              onClick={() => handleSortChange('oldest')}>
+              Oldest
+            </button>
+            <button 
+              className="dropdown-item"
+              onClick={() => handleSortChange('mostLiked')}>
+              Most Liked
+            </button>
+            <button 
+              className="dropdown-item"
+              onClick={() => handleSortChange('leastLiked')}>
+              Least Liked
+            </button>
+          </div>
+        )}
+      </div>
+
       {error && <p className="alert alert-danger">Error: {error}</p>}
       {isLoading && !error && <p>Loading...</p>}
       {!isLoading && posts.length === 0 && !error && (
@@ -102,12 +193,12 @@ const ListPosts: FC = () => {
 
       {posts.length > 0 && (
         <div className="row">
-          {posts.map((post: Post) => (
+          {sortedPosts.map((post: Post) => (
             <div key={post._id} className="col-md-6 col-lg-4 mb-4">
               <div className="card shadow-sm h-100">
                 <div className="card-body d-flex flex-column">
-                  <h5 className="card-title">{post.title}</h5>
-                  <p className="card-text flex-grow-1">{post.content}</p>
+                <h5 className="card-title text-center">{post.title}</h5>
+                <p className="card-text flex-grow-1">{post.content}</p>
                   {post.image && (
                     <img
                       src={post.image}
@@ -116,10 +207,12 @@ const ListPosts: FC = () => {
                       style={{ height: "200px", objectFit: "cover" }}
                     />
                   )}
-                  <p className="text-muted">Author: {post.owner}</p>
-                  <div className="d-flex align-items-center gap-3">
+                  <p className="text-muted mb-2">Author: {post.owner}</p>
+                  
+                  {/* Action buttons row */}
+                  <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
                     <button
-                      className={`btn d-flex align-items-center gap-2 ${
+                      className={`btn btn-sm d-flex align-items-center gap-2 ${
                         user?._id && post.likes.includes(user._id)
                           ? "btn-danger"
                           : "btn-outline-primary"
@@ -129,7 +222,7 @@ const ListPosts: FC = () => {
                       {post.likes.length}
                     </button>
                     <button
-                      className="btn btn-outline-secondary d-flex align-items-center gap-2"
+                      className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2"
                       onClick={() =>
                         navigate("/comments", {
                           state: { comments: post.comments, postId: post._id },
@@ -138,21 +231,40 @@ const ListPosts: FC = () => {
                       <FontAwesomeIcon icon={faComment} />
                       {post.comments.length}
                     </button>
+                    
+                    {user?._id === post.owner && (
+                      <>
+                        <button
+                          className="btn btn-sm btn-warning d-flex align-items-center gap-2"
+                          onClick={() => navigate(`/update-post/${post._id}`)}>
+                          <FontAwesomeIcon icon={faEdit} /> Update
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger d-flex align-items-center gap-2"
+                          onClick={() => handleDelete(post._id)}>
+                          <FontAwesomeIcon icon={faTrash} /> Delete
+                        </button>
+                      </>
+                    )}
                   </div>
-                  {user?._id === post.owner && (
-                    <div className="mt-3 d-flex gap-2">
-                      <button
-                        className="btn btn-warning"
-                        onClick={() => navigate(`/update-post/${post._id}`)}>
-                        <FontAwesomeIcon icon={faEdit} className="me-2" /> Update
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => handleDelete(post._id)}>
-                        <FontAwesomeIcon icon={faTrash} className="me-2" /> Delete
-                      </button>
-                    </div>
-                  )}
+                  
+                  {/* Timestamps */}
+                  <div className="d-flex justify-content-between mt-auto">
+                    <small className="text-muted fst-italic">
+                      Created: {formatDate(post.createdAt)}
+                    </small>
+                    {post.updatedAt && 
+                     (!post.createdAt || 
+                      (post.updatedAt instanceof Date && post.createdAt instanceof Date && 
+                       post.updatedAt.getTime() !== post.createdAt.getTime()) ||
+                      (!(post.updatedAt instanceof Date) && !(post.createdAt instanceof Date) && 
+                       new Date(post.updatedAt).getTime() !== new Date(post.createdAt).getTime())
+                     ) && (
+                      <small className="text-muted fst-italic">
+                        Updated: {formatDate(post.updatedAt)}
+                      </small>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

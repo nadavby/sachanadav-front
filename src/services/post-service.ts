@@ -10,6 +10,8 @@ export type Post = {
     image: string,
     likes: string[],
     comments: string[],
+    createdAt: Date,
+    updatedAt: Date,
 };
 
 const getAll = <T>(endpoint: string) => {
