@@ -18,7 +18,7 @@ export interface IUser {
   email: string;
   userName: string;
   password?: string;
-  imgUrl?: string;
+  imgURL?: string;
   accessToken?: string;
   refreshToken?: string;
 }
@@ -75,13 +75,18 @@ const register = async (user: IUser) => {
 };
 
 const googleSignIn = async (credential: CredentialResponse) => {
-  const abortController = new AbortController();
   try {
-    const { data } = await apiClient.post<IUser>("/auth/google", credential, {
-      signal: abortController.signal,
-    });
+    const { data } = await apiClient.post<IUser>("/auth/google", credential);
 
-    return data;
+    console.log("Google Sign-In response:", data);
+
+    if (data.accessToken && data.refreshToken) {
+      saveTokens(data.accessToken, data.refreshToken);
+    } else {
+      console.warn("No tokens returned from Google Sign-In!");
+    }
+
+    return data; // החזר את המשתמש
   } catch (error) {
     console.error("Google Sign-In failed:", error);
     throw error;
@@ -113,12 +118,16 @@ const login = async (email: string, password: string) => {
     const { data } = await apiClient.post<IUser>(
       "/auth/login",
       { email, password },
-      { signal: abortController.signal }
+      { 
+        headers: { "Content-Type": "application/json" },
+        signal: abortController.signal 
+      }
     );
 
     if (data.accessToken && data.refreshToken) {
       saveTokens(data.accessToken, data.refreshToken);
     }
+    console.log("Login success:", data);
 
     return data;
   } catch (error) {

@@ -32,7 +32,7 @@ const ListPosts: FC = () => {
   }
 
   const user = currentUser;
-
+  console.log(isAuthenticated, user);
   const handleLike = async (postId: string) => {
     if (!user || typeof user._id !== "string") {
       console.error("User is not valid:", user);
@@ -140,14 +140,13 @@ const ListPosts: FC = () => {
               <FontAwesomeIcon icon={faSignInAlt} className="me-2" /> Login
             </button>
           ))}
+          <h1 className="text-center">TripBuddy✈️</h1>
         <button
           className="btn btn-info"
           onClick={() => navigate("/chatbot")}>
           <FontAwesomeIcon icon={faRobot} className="me-2" /> Chatbot
         </button>
       </div>
-
-      {/* Filter options as dropdown */}
       <div className="mb-4 position-relative">
         <div className="d-flex align-items-center">
           <button 
@@ -208,8 +207,6 @@ const ListPosts: FC = () => {
                     />
                   )}
                   <p className="text-muted mb-2">Author: {post.owner}</p>
-                  
-                  {/* Action buttons row */}
                   <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
                     <button
                       className={`btn btn-sm d-flex align-items-center gap-2 ${
@@ -232,7 +229,7 @@ const ListPosts: FC = () => {
                       {post.comments.length}
                     </button>
                     
-                    {user?._id === post.owner && (
+                    {user?.userName === post.owner && (
                       <>
                         <button
                           className="btn btn-sm btn-warning d-flex align-items-center gap-2"
@@ -247,8 +244,6 @@ const ListPosts: FC = () => {
                       </>
                     )}
                   </div>
-                  
-                  {/* Timestamps */}
                   <div className="d-flex justify-content-between mt-auto">
                     <small className="text-muted fst-italic">
                       Created: {formatDate(post.createdAt)}
@@ -272,7 +267,7 @@ const ListPosts: FC = () => {
         </div>
       )}
 
-      <button className="btn btn-primary m-3" onClick={() => setPosts([...posts])}>
+      <button className="btn btn-primary position-fixed bottom-0 start-0 m-3" onClick={() => setPosts([...posts])}>
         Refresh
       </button>
       <button

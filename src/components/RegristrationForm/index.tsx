@@ -1,11 +1,8 @@
-/** @format */
-
 import { FC, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImage } from "@fortawesome/free-solid-svg-icons";
+import { faImage, faEnvelope, faUser, faLock } from "@fortawesome/free-solid-svg-icons";
 import { useForm } from "react-hook-form";
 import userService, { IUser } from "../../services/user-service";
-import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import avatar from "../../assets/avatar.png";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,7 +45,7 @@ export const RegistrationForm: FC = () => {
         email: data.email,
         userName: data.userName,
         password: data.password,
-        imgUrl: res.data.url,
+        imgURL: res.data.url,
       };
 
       const registerRes = await userService.register(user);
@@ -59,117 +56,122 @@ export const RegistrationForm: FC = () => {
     }
   };
 
-  const onGoogleLoginSuccess = async (response: CredentialResponse) => {
-    console.log(response);
-    try {
-      const googleRes = await userService.googleSignIn(response);
-      console.log(googleRes);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const onGoogleLoginError = async () => {
-    console.log("Google login failed");
-  };
-
   const { ref, ...rest } = register("img");
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div
-        style={{
-          width: "100vw",
-          display: "flex",
-          backgroundColor: "white",
-          height: "100vh",
-          justifyContent: "center",
-          alignItems: "center",
-        }}>
-        <div
-          className="d-flex flex-column "
-          style={{
-            width: "60%",
-            backgroundColor: "lightblue",
-            padding: "20px",
-            borderRadius: "10px",
-          }}>
-          <h1 style={{ alignSelf: "center" }}>Registration Form</h1>
-          <img
-            src={file ? URL.createObjectURL(file) : avatar}
-            alt=""
-            style={{
-              width: "200px",
-              height: "200px",
-              alignSelf: "center",
-              borderRadius: "50%",
-              marginBottom: "10px",
-            }}
-          />
-          <FontAwesomeIcon
-            icon={faImage}
-            className="fa-xl "
-            onClick={() => {
-              inputFileRef.current?.click();
-            }}
-            style={{
-              alignSelf: "baseline",
-              marginBottom: "20px",
-              marginLeft: "275px",
-            }}
-          />
-          <input
-            {...rest}
-            ref={(e) => {
-              ref(e);
-              inputFileRef.current = e;
-            }}
-            id="img"
-            type="file"
-            className="mb-3"
-            accept="image/jpeg,image/png"
-            style={{ display: "none" }}
-          />
-          <label>email:</label>
-          <input
-            {...register("email")}
-            type="email"
-            placeholder="Enter your email"
-            className="mb"
-            style={{ borderRadius: "5px", border: "1px" }}
-          />
-          {errors.email && (
-            <p className="text-danger">{errors.email.message}</p>
-          )}
-          <label>userName:</label>
-          <input
-            {...register("userName")}
-            type="text"
-            placeholder="Enter your userName"
-            className="mb"
-            style={{ borderRadius: "5px", border: "1px" }}
-          />
-          {errors.userName && (
-            <p className="text-danger">{errors.userName.message}</p>
-          )}
-          <label>password:</label>
-          <input
-            {...register("password")}
-            type="password"
-            placeholder="Enter your password"
-            className="mb-3"
-            style={{ borderRadius: "5px", border: "1px" }}
-          />
-          {errors.password && (
-            <p className="text-danger">{errors.password.message}</p>
-          )}
-          <button className="btn btn-outline-secondary">Register</button>
-          <GoogleLogin
-            onSuccess={onGoogleLoginSuccess}
-            onError={onGoogleLoginError}
-          />
+    <div className="container mt-3">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="row justify-content-center">
+          <div className="col-md-8 col-lg-6">
+            <div className="card shadow-sm">
+              <div className="card-body">
+                <h2 className="card-title text-center mb-4">Registration Form</h2>
+                
+                <div className="text-center mb-4 position-relative">
+                  <img
+                    src={file ? URL.createObjectURL(file) : avatar}
+                    alt="Profile"
+                    className="rounded-circle"
+                    style={{
+                      width: "150px",
+                      height: "150px",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <div className="position-absolute bottom-0 end-0" style={{ marginRight: "30%" }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary rounded-circle"
+                      onClick={() => {
+                        inputFileRef.current?.click();
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faImage} />
+                    </button>
+                  </div>
+                  <input
+                    {...rest}
+                    ref={(e) => {
+                      ref(e);
+                      inputFileRef.current = e;
+                    }}
+                    id="img"
+                    type="file"
+                    className="d-none"
+                    accept="image/jpeg,image/png"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="email" className="form-label d-flex align-items-center">
+                    <FontAwesomeIcon icon={faEnvelope} className="me-2" />
+                    Email
+                  </label>
+                  <input
+                    {...register("email")}
+                    type="email"
+                    className={`form-control ${errors.email ? "is-invalid" : ""}`}
+                    id="email"
+                    placeholder="Enter your email"
+                  />
+                  {errors.email && (
+                    <div className="invalid-feedback">{errors.email.message}</div>
+                  )}
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="userName" className="form-label d-flex align-items-center">
+                    <FontAwesomeIcon icon={faUser} className="me-2" />
+                    Username
+                  </label>
+                  <input
+                    {...register("userName")}
+                    type="text"
+                    className={`form-control ${errors.userName ? "is-invalid" : ""}`}
+                    id="userName"
+                    placeholder="Enter your username"
+                  />
+                  {errors.userName && (
+                    <div className="invalid-feedback">{errors.userName.message}</div>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <label htmlFor="password" className="form-label d-flex align-items-center">
+                    <FontAwesomeIcon icon={faLock} className="me-2" />
+                    Password
+                  </label>
+                  <input
+                    {...register("password")}
+                    type="password"
+                    className={`form-control ${errors.password ? "is-invalid" : ""}`}
+                    id="password"
+                    placeholder="Enter your password"
+                  />
+                  {errors.password && (
+                    <div className="invalid-feedback">{errors.password.message}</div>
+                  )}
+                </div>
+
+                <div className="d-grid gap-2">
+                  <button type="submit" className="btn btn-primary">
+                    Register
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="text-center mt-3">
+              <button 
+                type="button" 
+                className="btn btn-outline-secondary"
+                onClick={() => navigate("/login")}
+              >
+                Already have an account? Log in
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 };

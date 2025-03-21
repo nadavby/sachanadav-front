@@ -16,7 +16,11 @@ export const useAuth = () => {
 
   const checkAuthState = useCallback(async () => {
     setLoading(true);
-    const token = userService.getRefreshToken();
+    let token = userService.getRefreshToken();
+    if (!token) {
+      console.warn("No refresh token found, Checking for Google Account.");
+      token = userService.getAccessToken();
+    }
     if (!token) {
       console.warn("No access token found, logging out.");
       logout();

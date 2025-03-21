@@ -10,66 +10,92 @@ import {
 import { useState, useEffect } from "react";
 import commentService, { Comment } from "../../services/comment-service";
 import { useAuth } from "../../hooks/useAuth";
+import { useComments } from "../../hooks/useComment";
 
 const ListComments = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { comments, error: fetchError, isLoading: fetchLoading, setComments, setError: setFetchError, setIsLoading: setFetchLoading } = useComments();
   const [newComment, setNewComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [postId, setPostId] = useState<string | undefined>();
-  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(
-    null
-  );
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [filteredComments, setFilteredComments] = useState<Comment[]>([]);
 
   useEffect(() => {
-    if (location.state?.comments && location.state.comments.length > 0) {
-      setComments(location.state.comments);
+    if (location.state?.postId) {
       setPostId(location.state.postId);
-      setIsLoading(false);
-    } else if (location.state?.postId) {
-      setPostId(location.state.postId);
-      setIsLoading(false);
+    } else {
+      setFetchError("Post ID not found in navigation state");
     }
-  }, [location.state]);
+  }, [location.state, setFetchError]);
+
+  useEffect(() => {
+    if (comments.length > 0 && postId) {
+      const filtered = comments.filter(comment => comment.postId === postId);
+      setFilteredComments(filtered);
+    } else {
+      setFilteredComments([]);
+    }
+  }, [comments, postId]);
+
+  useEffect(() => {
+    if (fetchError) {
+      setError(fetchError);
+    }
+  }, [fetchError]);
 
   const handleCreateComment = async () => {
     if (!newComment.trim()) return;
-    if (!currentUser?._id) return setError("You need to be logged in");
-    if (!postId) return setError("Post ID not found");
+    if (!currentUser?._id) {
+      setFetchError("You need to be logged in");
+      return;
+    }
+    if (!postId) {
+      setFetchError("Post ID not found");
+      return;
+    }
 
-    setIsLoading(true);
+    setFetchLoading(true);
     try {
       const commentData: Comment = {
         content: newComment,
         postId,
-        owner: currentUser._id,
+        owner: currentUser.userName,
       };
       const createdComment = await commentService.create(commentData);
       setComments([...comments, createdComment]);
+      setFilteredComments([...filteredComments, createdComment]);
       setNewComment("");
+      setFetchError(null);
     } catch (err) {
       console.error(err);
-      setError("An error occurred while creating the comment");
+      setFetchError("An error occurred while creating the comment");
     } finally {
-      setIsLoading(false);
+      setFetchLoading(false);
     }
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!currentUser?._id) return setError("You need to be logged in");
-    setIsLoading(true);
+    if (!currentUser?._id) {
+      setFetchError("You need to be logged in");
+      return;
+    }
+    
+    setFetchLoading(true);
     try {
       await commentService.deleteById(commentId);
-      setComments(comments.filter((comment) => comment._id !== commentId));
+      const updatedComments = comments.filter((comment) => comment._id !== commentId);
+      setComments(updatedComments);
+      setFilteredComments(filteredComments.filter((comment) => comment._id !== commentId));
+      setFetchError(null);
     } catch (err) {
       console.error(err);
-      setError("An error occurred while deleting the comment");
+      setFetchError("An error occurred while deleting the comment");
     } finally {
-      setIsLoading(false);
+      setFetchLoading(false);
     }
   };
 
@@ -79,29 +105,46 @@ const ListComments = () => {
   };
 
   const handleSaveComment = async (commentId: string) => {
-    if (!currentUser?._id) return setError("You need to be logged in");
-    if (!postId) return setError("Post ID not found");
+    if (!currentUser?._id) {
+      setFetchError("You need to be logged in");
+      return;
+    }
+    if (!postId) {
+      setFetchError("Post ID not found");
+      return;
+    }
 
-    setIsLoading(true);
+    setFetchLoading(true);
     try {
       const updatedComment = await commentService.updateById(commentId, {
         content: editContent,
         postId,
-        owner: currentUser._id,
+        owner: currentUser.userName,
       });
-      setComments(
-        comments.map((comment) =>
+      
+      const updatedMainComments = comments.map((comment) =>
+        comment._id === commentId ? updatedComment : comment
+      );
+      setComments(updatedMainComments);
+      
+      setFilteredComments(
+        filteredComments.map((comment) =>
           comment._id === commentId ? updatedComment : comment
         )
       );
+      
       setSelectedCommentId(null);
+      setFetchError(null);
     } catch (err) {
       console.error(err);
-      setError("An error occurred while updating the comment");
+      setFetchError("An error occurred while updating the comment");
     } finally {
-      setIsLoading(false);
+      setFetchLoading(false);
     }
   };
+
+  const isLoading = fetchLoading;
+  const displayError = error || fetchError;
 
   return (
     <div className="container mt-4">
@@ -115,7 +158,7 @@ const ListComments = () => {
         Back
       </button>
       <h2>Comments</h2>
-      {error && <div className="alert alert-danger">{error}</div>}
+      {displayError && <div className="alert alert-danger">{displayError}</div>}
       {isLoading && (
         <div
           className="spinner-border"
@@ -123,9 +166,9 @@ const ListComments = () => {
           <span className="visually-hidden">Loading...</span>
         </div>
       )}
-      {comments.length > 0 ? (
+      {filteredComments.length > 0 ? (
         <div className="comment-list">
-          {comments.map((comment) => (
+          {filteredComments.map((comment) => (
             <div
               key={comment._id}
               className="card mb-3">
@@ -150,7 +193,7 @@ const ListComments = () => {
                     <small className="text-muted">
                       Author: {comment.owner}
                     </small>
-                    {currentUser?._id === comment.owner && (
+                    {currentUser?.userName === comment.owner && (
                       <div className="mt-2">
                         <button
                           className="btn btn-warning me-2"

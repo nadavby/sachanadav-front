@@ -54,4 +54,15 @@ const deleteById = async (id: string) => {
   });
 };
 
-export default { create, updateById, deleteById };
+const getAll = <T>(endpoint: string) => {
+  const abortController = new AbortController();
+  const request = apiClient.get<T[]>(endpoint, {
+    signal: abortController.signal,
+  });
+  return {
+    abort: () => abortController.abort(),
+    request,
+  };
+};
+
+export default { create, updateById, deleteById, getAll };
