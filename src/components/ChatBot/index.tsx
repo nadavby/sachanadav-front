@@ -135,7 +135,9 @@ const ChatbotPage = () => {
   <button className="btn btn-outline-primary" onClick={() => navigate(-1)}>
     <FontAwesomeIcon icon={faArrowLeft} className="me-2" /> Back
   </button>
-  <h1 className="text-center flex-grow-1 mb-3">TripBuddy🧠</h1>
+  <h1 className="text-primary text-center flex-grow-1 mb-3">
+   TripBuddy
+</h1>
 </div>
       <div className="container d-flex flex-column vh-100 bg-light">
         <div 
