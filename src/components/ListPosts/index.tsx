@@ -2,7 +2,7 @@ import { FC, useState } from "react";
 import { usePosts } from "../../hooks/usePost";
 import { useAuth } from "../../hooks/useAuth";
 import { Post } from "../../services/post-service";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -28,11 +28,10 @@ const ListPosts: FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   if (!authLoading && !isAuthenticated) {
-    return <Navigate to="/login" />;
+    navigate("/login");
   }
 
   const user = currentUser;
-  console.log(isAuthenticated, user);
   const handleLike = async (postId: string) => {
     if (!user || typeof user._id !== "string") {
       console.error("User is not valid:", user);
