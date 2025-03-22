@@ -19,6 +19,7 @@ const schema = z.object({
 
 export const RegistrationForm: FC = () => {
   const [file, setFile] = useState<File | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const navigate = useNavigate();
   const {
     register,
@@ -37,6 +38,7 @@ export const RegistrationForm: FC = () => {
 
   const onSubmit = async (data: formData) => {
     console.log(data);
+    setServerError(null);
 
     try {
       const res = await userService.uploadImage(file as File);
@@ -51,8 +53,22 @@ export const RegistrationForm: FC = () => {
       const registerRes = await userService.register(user);
       console.log(registerRes);
       navigate("/login");
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       console.error(error);
+      if (error.response) {
+        if (typeof error.response.data === 'string') {
+          setServerError(error.response.data);
+        } else if (error.response.data && error.response.data.message) {
+          setServerError(error.response.data.message);
+        } else {
+          setServerError(`Registration failed (${error.response.status}). Please try again.`);
+        }
+      } else if (error.message) {
+        setServerError(error.message);
+      } else {
+        setServerError("An error occurred during registration. Please try again.");
+      }
     }
   };
 
@@ -63,6 +79,12 @@ export const RegistrationForm: FC = () => {
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="row justify-content-center">
           <div className="col-md-8 col-lg-6">
+            {serverError && (
+              <div className="alert alert-danger mb-4" role="alert">
+                {serverError}
+              </div>
+            )}
+            
             <div className="card shadow-sm">
               <div className="card-body">
                 <h2 className="card-title text-center mb-4">Registration Form</h2>

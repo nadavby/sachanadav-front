@@ -2,7 +2,7 @@ import { FC, useState } from "react";
 import { usePosts } from "../../hooks/usePost";
 import { useAuth } from "../../hooks/useAuth";
 import { Post } from "../../services/post-service";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faComment,
@@ -14,7 +14,6 @@ import {
   faTrash,
   faRobot,
   faSort,
-  faCaretDown,
 } from "@fortawesome/free-solid-svg-icons";
 import postService from "../../services/post-service";
 
@@ -28,11 +27,11 @@ const ListPosts: FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   if (!authLoading && !isAuthenticated) {
-    return <Navigate to="/login" />;
+    navigate("/login");
+    return;
   }
 
   const user = currentUser;
-  console.log(isAuthenticated, user);
   const handleLike = async (postId: string) => {
     if (!user || typeof user._id !== "string") {
       console.error("User is not valid:", user);
@@ -128,25 +127,30 @@ const ListPosts: FC = () => {
       <div className="d-flex justify-content-between mb-3">
         {!authLoading &&
           (isAuthenticated ? (
-            <button
-              className="btn btn-outline-primary"
-              onClick={() => navigate("/profile")}>
-              <FontAwesomeIcon icon={faUser} className="me-2" /> My Profile
-            </button>
+            <button className="btn btn-outline-primary d-flex flex-column align-items-center justify-content-center text-center p-3" style={{ width: "100px", height: "100px" }} onClick={() => navigate("/profile")}>
+            <FontAwesomeIcon icon={faUser} size="2x" />
+            <span className="mt-2">My Profile</span>
+          </button>
           ) : (
-            <button
-              className="btn btn-outline-secondary"
-              onClick={() => navigate("/login")}>
-              <FontAwesomeIcon icon={faSignInAlt} className="me-2" /> Login
-            </button>
+            <button className="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center text-center p-3" style={{ width: "100px", height: "100px" }} onClick={() => navigate("/login")}>
+        <FontAwesomeIcon icon={faSignInAlt} size="2x" />
+        <span className="mt-2">Login</span>
+      </button>
           ))}
-          <h1 className="text-center">TripBuddy✈️</h1>
-        <button
-          className="btn btn-info"
-          onClick={() => navigate("/chatbot")}>
-          <FontAwesomeIcon icon={faRobot} className="me-2" /> Chatbot
-        </button>
+      <div className="text-center">
+      <h1 className="text-primary text-center flex-grow-1 mb-3">
+   TripBuddy
+</h1>
+        <p className="lead text-muted">
+          Your go-to travel companion for discovering amazing places!
+        </p>
       </div>
+      <button className="btn btn-info d-flex flex-column align-items-center justify-content-center text-center p-3" style={{ width: "100px", height: "100px" }} onClick={() => navigate("/chatbot")}>
+    <FontAwesomeIcon icon={faRobot} size="2x" />
+    <span className="mt-2">Ask TripBuddy</span>
+  </button>
+      </div>
+      <hr className="border border-primary border-2 opacity-75 my-4" />
       <div className="mb-4 position-relative">
         <div className="d-flex align-items-center">
           <button 
@@ -155,7 +159,6 @@ const ListPosts: FC = () => {
           >
             <FontAwesomeIcon icon={faSort} className="me-2" />
             {getSortOptionText()}
-            <FontAwesomeIcon icon={faCaretDown} className="ms-2" />
           </button>
         </div>
         {dropdownOpen && (

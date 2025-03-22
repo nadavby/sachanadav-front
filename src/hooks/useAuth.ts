@@ -13,42 +13,13 @@ interface DecodedToken {
 export const useAuth = () => {
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const checkAuthState = useCallback(async () => {
-    setLoading(true);
-    let token = userService.getRefreshToken();
-    if (!token) {
-      console.warn("No refresh token found, Checking for Google Account.");
-      token = userService.getAccessToken();
-    }
-    if (!token) {
-      console.warn("No access token found, logging out.");
-      logout();
-      return;
-    }
-
-    try {
-      const decoded = jwtDecode<DecodedToken>(token);
-      const currentTime = Date.now() / 1000;
-
-      if (decoded.exp <= currentTime) {
-        console.log("Access token expired, attempting refresh.");
-        const refreshResult = await userService.refresh();
-        userService.saveTokens(
-          refreshResult.accessToken,
-          refreshResult.refreshToken
-        );
-      }
-      await fetchUserDetails();
-    } catch (error) {
-      console.error("Error decoding token or refreshing session:", error);
-      logout();
-    } finally {
-      setLoading(false);
-    }
+  const logout = useCallback(() => {
+    userService.logout();
+    setCurrentUser(null);
+    setLoading(false);
   }, []);
 
-  const fetchUserDetails = async () => {
+  const fetchUserDetails = useCallback(async () => {
     try {
       const user = await userService.getCurrentUser();
       setCurrentUser(user);
@@ -56,12 +27,57 @@ export const useAuth = () => {
       console.error("Failed to fetch user details", error);
       logout();
     }
-  };
+  }, [logout]);
 
-  const logout = () => {
-    userService.logout();
-    setCurrentUser(null);
-  };
+  const checkAuthState = useCallback(async () => {
+    setLoading(true);
+      const timeoutId = setTimeout(() => {
+      console.warn("Auth check timed out");
+      setLoading(false);
+    }, 5000);
+    let token = userService.getRefreshToken();
+    if (!token) {
+      console.warn("No refresh token found, Checking for Google Account.");
+      token = userService.getAccessToken();
+    }
+    if (!token) {
+      console.warn("No access token found, logging out.");
+      clearTimeout(timeoutId);
+      logout();
+      return;
+    }
+    try {
+      const decoded = jwtDecode<DecodedToken>(token);
+      const currentTime = Date.now() / 1000;
+      if (decoded.exp <= currentTime) {
+        console.log("Access token expired, attempting refresh.");
+        try {
+          const refreshResult = await userService.refresh();
+          if (refreshResult) {
+            userService.saveTokens(
+              refreshResult.accessToken,
+              refreshResult.refreshToken
+            );
+          } else {
+            throw new Error("Failed to refresh token");
+          }
+        } catch (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+          clearTimeout(timeoutId);
+          logout();
+          return;
+        }
+      }
+      
+      await fetchUserDetails();
+      clearTimeout(timeoutId);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error decoding token or refreshing session:", error);
+      clearTimeout(timeoutId);
+      logout();
+    }
+  }, [logout, fetchUserDetails]);
 
   useEffect(() => {
     checkAuthState();
@@ -70,7 +86,7 @@ export const useAuth = () => {
   return {
     currentUser,
     loading,
-    isAuthenticated: currentUser,
+    isAuthenticated: !!currentUser,
     updateAuthState: checkAuthState,
     logout,
   };

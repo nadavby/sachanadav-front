@@ -9,14 +9,18 @@ import CreatePost from "./CreatePost";
 import ListComments from "./ListComments";
 import UpdatePost from "./UpdatePost";
 import Chatbot from "./ChatBot";
+import { useAuth } from "../hooks/useAuth";
 
 function App() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) return <p>Loading...</p>;
   return (
     <>
       <Routes>
         <Route
           path="/"
-          element={<Login />}
+          element={isAuthenticated ? <PostList /> : <Login />}
         />
         <Route
           path="/login"
