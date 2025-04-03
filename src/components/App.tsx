@@ -3,13 +3,13 @@
 import { Routes, Route } from "react-router-dom";
 import { Login } from "./Login";
 import { RegistrationForm } from "./RegristrationForm";
-import PostList from "./ListPosts";
 import UserProfile from "./UserProfile";
-import CreatePost from "./CreatePost";
-import ListComments from "./ListComments";
-import UpdatePost from "./UpdatePost";
-import Chatbot from "./ChatBot";
 import { useAuth } from "../hooks/useAuth";
+import LostItems from "./LostItems";
+import FoundItems from "./FoundItems";
+import ItemUpload from "./ItemUpload";
+import ItemDetail from "./ItemDetail";
+import Navigation from "./Navigation";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -17,10 +17,11 @@ function App() {
   if (loading) return <p>Loading...</p>;
   return (
     <>
+      <Navigation />
       <Routes>
         <Route
           path="/"
-          element={isAuthenticated ? <PostList /> : <Login />}
+          element={isAuthenticated ? <LostItems /> : <Login />}
         />
         <Route
           path="/login"
@@ -31,34 +32,26 @@ function App() {
           element={<RegistrationForm />}
         />
         <Route
-          path="/posts"
-          element={<PostList />}
+          path="/lost-items"
+          element={<LostItems />}
         />
-         <Route
+        <Route
+          path="/found-items"
+          element={<FoundItems />}
+        />
+        <Route
           path="/profile"
           element={<UserProfile />}
         />
         <Route
-          path="/create-post"
-          element={<CreatePost />}
+          path="/upload-item"
+          element={<ItemUpload />}
         />
         <Route
-          path="/comments"
-          element={<ListComments />}
-  
-        />
-        <Route
-          path="/update-post/:postId"
-          element={<UpdatePost />}
-  
-        />
-         <Route
-          path="/chatbot"
-          element={<Chatbot />}
-  
+          path="/item/:itemId"
+          element={<ItemDetail />}
         />
       </Routes>
-
     </>
   );
 }
