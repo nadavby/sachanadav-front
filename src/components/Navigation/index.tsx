@@ -12,6 +12,7 @@ import {
   faUpload,
   faHome
 } from "@fortawesome/free-solid-svg-icons";
+import NotificationBell from "../common/NotificationBell";
 
 const Navigation: FC = () => {
   const { isAuthenticated, loading, currentUser, logout } = useAuth();
@@ -79,6 +80,11 @@ const Navigation: FC = () => {
             {!loading && (
               isAuthenticated ? (
                 <>
+                  <li className="nav-item">
+                    <div className="nav-link">
+                      <NotificationBell />
+                    </div>
+                  </li>
                   <li className="nav-item">
                     <Link
                       to="/profile"

@@ -15,6 +15,8 @@ export interface Item {
   itemType: 'lost' | 'found';
   imgURL?: string;
   owner: string;
+  ownerName?: string;
+  ownerEmail?: string;
   matchResults?: MatchResult[];
   isResolved?: boolean;
   resolvedWithItemId?: string;

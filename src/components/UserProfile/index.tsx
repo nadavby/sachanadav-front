@@ -21,6 +21,7 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useNotifications } from "../../hooks/useNotifications";
 
 const profileFormSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -43,6 +44,7 @@ interface UserData {
 
 const UserProfile: FC = () => {
   const { currentUser, updateAuthState, isAuthenticated, loading } = useAuth();
+  const { fetchMatchNotifications } = useNotifications();
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [localUser, setLocalUser] = useState<UserData | null>(null);
@@ -91,6 +93,14 @@ const UserProfile: FC = () => {
       };
     }
   }, [watchProfileImage, tempImageURL]);
+
+  // Fetch matches for notifications
+  useEffect(() => {
+    if (items && items.length > 0) {
+      // Process the user's items to check for matches and create notifications
+      fetchMatchNotifications(items);
+    }
+  }, [items, fetchMatchNotifications]);
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!localUser || !localUser._id) return;
