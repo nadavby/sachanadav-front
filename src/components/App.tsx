@@ -10,13 +10,15 @@ import FoundItems from "./FoundItems";
 import ItemUpload from "./ItemUpload";
 import ItemDetail from "./ItemDetail";
 import Navigation from "./Navigation";
+import { NotificationsProvider } from "../hooks/useNotifications";
+import MatchConfirmation from "./MatchConfirmation";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) return <p>Loading...</p>;
   return (
-    <>
+    <NotificationsProvider>
       <Navigation />
       <Routes>
         <Route
@@ -51,8 +53,12 @@ function App() {
           path="/item/:itemId"
           element={<ItemDetail />}
         />
+        <Route
+          path="/item/:itemId/match/:matchId"
+          element={<MatchConfirmation />}
+        />
       </Routes>
-    </>
+    </NotificationsProvider>
   );
 }
 
