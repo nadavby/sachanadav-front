@@ -27,7 +27,7 @@ export const Login: FC = () => {
 
       if (response.accessToken && response.refreshToken) {
         console.log("Login success :", response);
-        navigate("/posts");
+        navigate("/lost-items");
       }
     } catch (error) {
       setServerError("Incorrect email or password.");
@@ -40,7 +40,7 @@ export const Login: FC = () => {
     try {
       const googleRes = await userService.googleSignIn(response);
       console.log(googleRes);
-      navigate("/posts");
+      navigate("/lost-items");
     } catch (error) {
       console.error(error);
     }
