@@ -69,12 +69,63 @@ const ItemUpload: FC = () => {
     setError(null);
     
     try {
+      // Enhanced logging for debugging token issues
+      const token = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      console.log("Access token exists:", !!token);
+      console.log("Access token length:", token ? token.length : 0);
+      if (token) {
+        console.log("Access token format check:", 
+          token.startsWith("ey") ? "JWT format detected" : "Unexpected token format");
+        
+        try {
+          // Try to decode the token payload to check format
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log("Token payload contains:", Object.keys(payload));
+          console.log("Token expiry:", new Date(payload.exp * 1000).toISOString());
+          console.log("Current time:", new Date().toISOString());
+          console.log("Token expired:", payload.exp * 1000 < Date.now());
+        } catch (e) {
+          console.error("Error decoding token:", e);
+        }
+      }
+      
+      console.log("Refresh token exists:", !!refreshToken);
+      console.log("Current user info:", {
+        id: currentUser._id, 
+        hasId: !!currentUser._id,
+        userLoaded: !!currentUser
+      });
+      
+      if (!token) {
+        setError("Authentication error: No access token found. Please log in again.");
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+      
+      // Debug logs
+      console.log("Form data being sent:", {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        location: formData.location,
+        date: formData.date,
+        itemType: formData.itemType,
+        owner: currentUser._id,
+        hasImage: !!uploadedImage
+      });
+      
+      // Create the new item object
       const newItem: Omit<Item, '_id'> = {
         ...formData,
         owner: currentUser._id,
       };
       
+      console.log("Calling itemService.addItem with user ID:", currentUser._id);
       const response = await itemService.addItem(newItem, uploadedImage || undefined);
+      
+      console.log("Item upload successful:", response.data);
       
       // If there are match results, set them
       if (response.data.matchResults && response.data.matchResults.length > 0) {
@@ -87,9 +138,47 @@ const ItemUpload: FC = () => {
           navigate('/found-items');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error uploading item:", err);
-      setError("Failed to upload item. Please try again.");
+      
+      // Check for specific authentication errors
+      if (err.response?.status === 401) {
+        setError("Authentication error: Your session may have expired. Please log in again.");
+        // Force logout and redirect to login after a short delay
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        setTimeout(() => navigate('/login'), 2000);
+      } else if (err.response?.status === 500) {
+        // Log detailed information about the 500 error
+        console.error("Server error details:", {
+          data: err.response.data,
+          headers: err.response.headers,
+          config: {
+            url: err.config.url,
+            method: err.config.method,
+            headers: err.config.headers,
+          }
+        });
+        
+        // Try to extract HTML error message if present
+        if (typeof err.response.data === 'string' && err.response.data.includes('<pre>')) {
+          const errorMessage = err.response.data.match(/<pre>(.*?)<\/pre>/s);
+          if (errorMessage && errorMessage[1]) {
+            console.error("Server error details:", errorMessage[1].trim());
+            setError(`Server error: ${errorMessage[1].trim().split('\n')[0]}`);
+          } else {
+            setError(`Server error (500): ${err.message}`);
+          }
+        } else {
+          setError(`Server error (500): ${err.message}`);
+        }
+      } else if (err.response) {
+        setError(`Error ${err.response.status}: ${err.response.data?.message || err.response.data || err.message}`);
+      } else if (err.request) {
+        setError("No response from server. Please check your connection.");
+      } else {
+        setError(`Failed to upload item: ${err.message}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
