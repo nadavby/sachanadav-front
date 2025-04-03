@@ -1,0 +1,125 @@
+.match-confirmation-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2rem 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100px;
+  position: relative;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e9ecef;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  border: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+  text-align: center;
+  transition: color 0.3s;
+}
+
+.progress-connector {
+  flex-grow: 1;
+  height: 2px;
+  background-color: #e9ecef;
+  position: relative;
+  transition: background-color 0.3s;
+}
+
+/* Active step */
+.progress-step.active .step-number {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.progress-step.active .step-label {
+  color: #007bff;
+  font-weight: bold;
+}
+
+/* Completed step */
+.progress-step.completed .step-number {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.progress-connector.active {
+  background-color: #28a745;
+}
+
+/* Match item images */
+.match-item-image {
+  height: 200px;
+  object-fit: cover;
+}
+
+/* Match score badge */
+.match-score-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+/* Contact method buttons */
+.contact-method-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 0.5rem;
+}
+
+.contact-method-buttons .btn {
+  flex: 1;
+}
+
+/* Success confirmation */
+.success-confirmation {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.success-icon {
+  color: #28a745;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .match-confirmation-progress {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .progress-connector {
+    width: 2px;
+    height: 20px;
+  }
+  
+  .contact-method-buttons {
+    flex-direction: column;
+  }
+} 

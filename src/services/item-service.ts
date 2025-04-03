@@ -16,6 +16,10 @@ export interface Item {
   imgURL?: string;
   owner: string;
   matchResults?: MatchResult[];
+  isResolved?: boolean;
+  resolvedWithItemId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface MatchResult {
@@ -29,12 +33,52 @@ export interface MatchResult {
   ownerContact?: string;
 }
 
+// Utility function to get a proper image URL - can be imported in components
+export const getItemImageUrl = (url: string | undefined): string => {
+  if (!url) return '';
+  
+  // For debugging
+  console.log("item-service - Processing image URL:", url);
+  
+  if (url.startsWith('http')) {
+    return url;
+  } else if (url.startsWith('/')) {
+    return `http://localhost:3000${url}`;
+  } else {
+    // Most likely case for backend-provided image paths
+    return `http://localhost:3000/uploads/${url}`;
+  }
+};
+
 const getAllLostItems = () => {
   const abortController = new AbortController();
   const request = apiClient.get<Item[]>("/items/lost", {
     signal: abortController.signal,
   });
-  return { request, abort: () => abortController.abort() };
+  
+  // Add a then handler to inspect and fix data structure if needed
+  const enhancedRequest = request.then(response => {
+    console.log("Raw lost items response:", response.data);
+    
+    // Check if data needs transformation
+    if (response.data && response.data.length > 0) {
+      // Check if fields are at the root or nested under a 'data' property
+      const firstItem = response.data[0];
+      
+      // If structure doesn't match our interface, transform it
+      if (!firstItem.hasOwnProperty('name') && firstItem.hasOwnProperty('data')) {
+        console.log("Transforming nested item structure...");
+        response.data = response.data.map((item: any) => item.data || item);
+      }
+    }
+    
+    return response;
+  });
+  
+  return { 
+    request: enhancedRequest, 
+    abort: () => abortController.abort() 
+  };
 };
 
 const getAllFoundItems = () => {
@@ -42,7 +86,30 @@ const getAllFoundItems = () => {
   const request = apiClient.get<Item[]>("/items/found", {
     signal: abortController.signal,
   });
-  return { request, abort: () => abortController.abort() };
+  
+  // Add a then handler to inspect and fix data structure if needed
+  const enhancedRequest = request.then(response => {
+    console.log("Raw found items response:", response.data);
+    
+    // Check if data needs transformation
+    if (response.data && response.data.length > 0) {
+      // Check if fields are at the root or nested under a 'data' property
+      const firstItem = response.data[0];
+      
+      // If structure doesn't match our interface, transform it
+      if (!firstItem.hasOwnProperty('name') && firstItem.hasOwnProperty('data')) {
+        console.log("Transforming nested found item structure...");
+        response.data = response.data.map((item: any) => item.data || item);
+      }
+    }
+    
+    return response;
+  });
+  
+  return { 
+    request: enhancedRequest, 
+    abort: () => abortController.abort() 
+  };
 };
 
 const getItemById = (id: string) => {
@@ -50,7 +117,28 @@ const getItemById = (id: string) => {
   const request = apiClient.get<Item>(`/items/${id}`, {
     signal: abortController.signal,
   });
-  return { request, abort: () => abortController.abort() };
+  
+  // Add a then handler to inspect and fix data structure if needed
+  const enhancedRequest = request.then(response => {
+    console.log("Raw item response:", response.data);
+    
+    // Check if data needs transformation
+    if (response.data) {
+      // Check if fields are at the root or nested under a 'data' property
+      const item = response.data as any;
+      if (!item.hasOwnProperty('name') && item.hasOwnProperty('data')) {
+        console.log("Transforming nested item details structure...");
+        response.data = item.data;
+      }
+    }
+    
+    return response;
+  });
+  
+  return { 
+    request: enhancedRequest, 
+    abort: () => abortController.abort() 
+  };
 };
 
 const getItemsByUser = (userId: string) => {
@@ -58,7 +146,30 @@ const getItemsByUser = (userId: string) => {
   const request = apiClient.get<Item[]>(`/items/user/${userId}`, {
     signal: abortController.signal,
   });
-  return { request, abort: () => abortController.abort() };
+  
+  // Add a then handler to inspect and fix data structure if needed
+  const enhancedRequest = request.then(response => {
+    console.log("Raw user items response:", response.data);
+    
+    // Check if data needs transformation
+    if (response.data && response.data.length > 0) {
+      // Check if fields are at the root or nested under a 'data' property
+      const firstItem = response.data[0] as any;
+      
+      // If structure doesn't match our interface, transform it
+      if (!firstItem.hasOwnProperty('name') && firstItem.hasOwnProperty('data')) {
+        console.log("Transforming nested user items structure...");
+        response.data = response.data.map((item: any) => item.data || item);
+      }
+    }
+    
+    return response;
+  });
+  
+  return { 
+    request: enhancedRequest, 
+    abort: () => abortController.abort() 
+  };
 };
 
 const addItem = async (item: Omit<Item, '_id'>, image?: File) => {
