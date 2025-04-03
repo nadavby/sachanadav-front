@@ -63,13 +63,24 @@ const getItemsByUser = (userId: string) => {
 const addItem = async (item: Omit<Item, '_id'>, image?: File) => {
   const formData = new FormData();
   
-  formData.append('item', JSON.stringify(item));
+  // Add all item properties directly to the formData
+  formData.append('name', item.name);
+  formData.append('description', item.description);
+  formData.append('category', item.category);
+  formData.append('location', item.location);
+  formData.append('date', item.date);
+  formData.append('itemType', item.itemType);
+  formData.append('owner', item.owner);
   
+  // Add the image with a specific field name
   if (image) {
-    formData.append('image', image);
+    formData.append('image', image, image.name);
   }
   
-  return apiClient.post<Item>('/items', formData, {
+  // Use a query parameter for any additional info
+  const url = `/items?itemType=${item.itemType}`;
+  
+  return apiClient.post<Item>(url, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -79,10 +90,17 @@ const addItem = async (item: Omit<Item, '_id'>, image?: File) => {
 const updateItem = (id: string, item: Partial<Item>, image?: File) => {
   const formData = new FormData();
   
-  formData.append('item', JSON.stringify(item));
+  // Add all available item properties directly to the formData
+  if (item.name) formData.append('name', item.name);
+  if (item.description) formData.append('description', item.description);
+  if (item.category) formData.append('category', item.category);
+  if (item.location) formData.append('location', item.location);
+  if (item.date) formData.append('date', item.date);
+  if (item.itemType) formData.append('itemType', item.itemType);
   
+  // Add the image with a specific field name if it exists
   if (image) {
-    formData.append('image', image);
+    formData.append('image', image, image.name);
   }
 
   return apiClient.put<Item>(`/items/${id}`, formData, {
