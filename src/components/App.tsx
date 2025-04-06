@@ -11,8 +11,9 @@ import ItemUpload from "./ItemUpload";
 import ItemDetail from "./ItemDetail";
 import Navigation from "./Navigation";
 import { NotificationsProvider } from "../hooks/useNotifications";
-import { NotificationProvider } from "./NotificationProvider";
+import NotificationProvider from "./NotificationProvider";
 import MatchConfirmation from "./MatchConfirmation";
+import DebugNotifications from "./common/DebugNotifications";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -58,6 +59,11 @@ function App() {
           <Route
             path="/item/:itemId/match/:matchId"
             element={<MatchConfirmation />}
+          />
+          {/* Debug route for testing notifications */}
+          <Route
+            path="/debug-notifications"
+            element={<DebugNotifications />}
           />
         </Routes>
       </NotificationProvider>

@@ -108,7 +108,7 @@ const MatchDetailModal: FC<MatchDetailModalProps> = ({
           <>
             <div className="match-detail-score">
               <FontAwesomeIcon icon={faPercentage} className="me-2" />
-              Match Score: <span>{Math.round((score || 0) * 100)}%</span>
+              Match Score: <span>{score}%</span>
             </div>
             
             <div className="match-detail-items">

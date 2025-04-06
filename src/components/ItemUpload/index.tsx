@@ -1,6 +1,6 @@
 /** @format */
 
-import { FC, useState, ChangeEvent, FormEvent } from "react";
+import { FC, useState, ChangeEvent, FormEvent, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import itemService, { Item } from "../../services/item-service";
@@ -11,22 +11,65 @@ import {
   faArrowLeft,
   faTag,
   faMapMarkerAlt,
-  faCalendarAlt
+  faCalendarAlt,
+  faLocationCrosshairs
 } from "@fortawesome/free-solid-svg-icons";
 import { itemCategories, ItemCategoryGroup } from "../../data/itemCategories";
+import { useLoadScript } from "@react-google-maps/api";
+
+interface Location {
+  lat: number;
+  lng: number;
+}
+
+interface ItemFormData {
+  kind: "lost" | "found";
+  categoryGroup: string;
+  itemType: string;
+  otherItemType?: string;
+  description: string;
+  date: string;
+  location: Location;
+}
+
+const defaultLocation = {
+  lat: 32.0853, // Default to Israel center
+  lng: 34.7818
+};
+
+const mapContainerStyle = {
+  width: "100%",
+  height: "300px",
+  marginBottom: "1rem",
+  borderRadius: "0.5rem"
+};
+
+// Libraries need to be defined outside the component to prevent re-renders
+const libraries = ["places"];
 
 const ItemUpload: FC = () => {
   const navigate = useNavigate();
   const { currentUser, isAuthenticated, loading } = useAuth();
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const googleMapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
   
-  const [formData, setFormData] = useState({
-    name: "",
+  // Use state to store API key to prevent issues with direct access to import.meta.env
+  const [apiKey] = useState(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyCqhXlqSGDjbIsC8sFcADsTV2z3nbuwLCs");
+  
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: apiKey,
+    libraries: libraries as any
+  });
+
+  const [formData, setFormData] = useState<ItemFormData>({
+    kind: "lost",
+    categoryGroup: "",
+    itemType: "",
+    otherItemType: "",
     description: "",
-    category: "",
-    categoryLabel: "",
-    location: "",
     date: new Date().toISOString().split('T')[0],
-    itemType: "lost" as "lost" | "found",
+    location: defaultLocation
   });
   
   const [selectedCategoryGroup, setSelectedCategoryGroup] = useState<ItemCategoryGroup | null>(null);
@@ -36,6 +79,99 @@ const ItemUpload: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [matchResults, setMatchResults] = useState<any[] | null>(null);
   const [otherCategory, setOtherCategory] = useState<string>("");
+  const [mapInitialized, setMapInitialized] = useState(false);
+
+  // Initialize the map when the script is loaded and the container is available
+  useEffect(() => {
+    if (isLoaded && !loadError && mapContainerRef.current && !mapInitialized) {
+      try {
+        // Create the map instance
+        const map = new window.google.maps.Map(mapContainerRef.current, {
+          center: formData.location,
+          zoom: 13,
+          fullscreenControl: false,
+          mapTypeControl: false,
+          streetViewControl: false,
+          zoomControl: true
+        });
+        
+        // Create the marker
+        const marker = new window.google.maps.Marker({
+          position: formData.location,
+          map: map,
+          draggable: true
+        });
+        
+        // Add click event listener to the map
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          if (e.latLng) {
+            marker.setPosition(e.latLng);
+            setFormData(prev => ({
+              ...prev,
+              location: {
+                lat: e.latLng.lat(),
+                lng: e.latLng.lng()
+              }
+            }));
+          }
+        });
+        
+        // Add drag end event listener to the marker
+        marker.addListener('dragend', () => {
+          const position = marker.getPosition();
+          if (position) {
+            setFormData(prev => ({
+              ...prev,
+              location: {
+                lat: position.lat(),
+                lng: position.lng()
+              }
+            }));
+          }
+        });
+        
+        // Store references
+        googleMapRef.current = map;
+        markerRef.current = marker;
+        setMapInitialized(true);
+      } catch (err) {
+        console.error("Error initializing Google Map:", err);
+        setError("Failed to initialize the map. Please try again later.");
+      }
+    }
+  }, [isLoaded, loadError, mapInitialized, formData.location]);
+  
+  // Update marker position when location changes
+  useEffect(() => {
+    if (mapInitialized && markerRef.current) {
+      markerRef.current.setPosition(formData.location);
+      googleMapRef.current?.setCenter(formData.location);
+    }
+  }, [formData.location, mapInitialized]);
+
+  const handleGetCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          
+          setFormData(prev => ({
+            ...prev,
+            location: newLocation
+          }));
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setError("Could not get your current location. Please select manually on the map.");
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by your browser. Please select location manually on the map.");
+    }
+  };
 
   if (!loading && !isAuthenticated) {
     navigate("/login");
@@ -46,12 +182,11 @@ const ItemUpload: FC = () => {
     const groupLabel = e.target.value;
     const group = itemCategories.find(g => g.label === groupLabel) || null;
     setSelectedCategoryGroup(group);
-    setFormData({
-      ...formData,
-      category: "",
-      categoryLabel: "",
-      name: ""
-    });
+    setFormData(prev => ({
+      ...prev,
+      categoryGroup: groupLabel,
+      itemType: ""
+    }));
     setOtherCategory("");
   };
 
@@ -60,31 +195,35 @@ const ItemUpload: FC = () => {
     
     if (name === "category") {
       const selectedOption = selectedCategoryGroup?.options.find(option => option.value === value);
-      
-      setFormData({
-        ...formData,
-        category: value,
-        categoryLabel: selectedOption?.label || value,
-        name: selectedOption?.label || value // Set the name to match the selected category item
-      });
+      setFormData(prev => ({
+        ...prev,
+        itemType: value
+      }));
       
       if (value !== "other") {
         setOtherCategory("");
       }
+    } else if (name === "itemType") {
+      setFormData(prev => ({
+        ...prev,
+        kind: value as "lost" | "found"
+      }));
     } else {
-      setFormData({ ...formData, [name]: value });
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
 
   const handleOtherCategoryChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setOtherCategory(value);
-    setFormData({
-      ...formData,
-      category: "other",
-      categoryLabel: value || "Other",
-      name: value || "Other"
-    });
+    setFormData(prev => ({
+      ...prev,
+      itemType: "other",
+      otherItemType: value || "Other"
+    }));
   };
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +231,6 @@ const ItemUpload: FC = () => {
       const file = e.target.files[0];
       setUploadedImage(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -113,120 +251,54 @@ const ItemUpload: FC = () => {
     setError(null);
     
     try {
-      // Enhanced logging for debugging token issues
-      const token = localStorage.getItem('accessToken');
-      const refreshToken = localStorage.getItem('refreshToken');
+      // Create FormData for multipart/form-data submission
+      const submitData = new FormData();
       
-      console.log("Access token exists:", !!token);
-      console.log("Access token length:", token ? token.length : 0);
-      if (token) {
-        console.log("Access token format check:", 
-          token.startsWith("ey") ? "JWT format detected" : "Unexpected token format");
-        
-        try {
-          // Try to decode the token payload to check format
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          console.log("Token payload contains:", Object.keys(payload));
-          console.log("Token expiry:", new Date(payload.exp * 1000).toISOString());
-          console.log("Current time:", new Date().toISOString());
-          console.log("Token expired:", payload.exp * 1000 < Date.now());
-        } catch (e) {
-          console.error("Error decoding token:", e);
-        }
+      // Add all form fields - using field names expected by the backend
+      // Map our frontend fields to what the backend expects
+      submitData.append('name', formData.itemType === "other" && otherCategory ? otherCategory : formData.itemType); // Name comes from item type
+      submitData.append('description', formData.description);
+      submitData.append('category', formData.categoryGroup);
+      submitData.append('location', formData.location ? JSON.stringify(formData.location) : '');
+      submitData.append('date', formData.date);
+      submitData.append('itemType', formData.kind); // "lost" or "found"
+      submitData.append('owner', currentUser._id);
+      
+      // Add image if present
+      if (uploadedImage) {
+        submitData.append('image', uploadedImage);
       }
       
-      console.log("Refresh token exists:", !!refreshToken);
-      console.log("Current user info:", {
-        id: currentUser._id, 
-        hasId: !!currentUser._id,
-        userLoaded: !!currentUser
-      });
+      const response = await itemService.addItem(submitData);
       
-      if (!token) {
-        setError("Authentication error: No access token found. Please log in again.");
-        setTimeout(() => navigate('/login'), 2000);
-        return;
-      }
-      
-      // Debug logs
-      console.log("Form data being sent:", {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        location: formData.location,
-        date: formData.date,
-        itemType: formData.itemType,
-        owner: currentUser._id,
-        hasImage: !!uploadedImage
-      });
-      
-      // Create the new item object
-      const newItem: Omit<Item, '_id'> = {
-        ...formData,
-        owner: currentUser._id,
-      };
-      
-      console.log("Calling itemService.addItem with user ID:", currentUser._id);
-      const response = await itemService.addItem(newItem, uploadedImage || undefined);
-      
-      console.log("Item upload successful:", response.data);
-      
-      // If there are match results, set them
       if (response.data.matchResults && response.data.matchResults.length > 0) {
         setMatchResults(response.data.matchResults);
       } else {
-        // Navigate based on item type if no matches
-        if (formData.itemType === 'lost') {
-          navigate('/lost-items');
-        } else {
-          navigate('/found-items');
-        }
+        navigate(formData.kind === 'lost' ? '/lost-items' : '/found-items');
       }
     } catch (err: any) {
       console.error("Error uploading item:", err);
       
-      // Check for specific authentication errors
       if (err.response?.status === 401) {
         setError("Authentication error: Your session may have expired. Please log in again.");
-        // Force logout and redirect to login after a short delay
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         setTimeout(() => navigate('/login'), 2000);
-      } else if (err.response?.status === 500) {
-        // Log detailed information about the 500 error
-        console.error("Server error details:", {
-          data: err.response.data,
-          headers: err.response.headers,
-          config: {
-            url: err.config.url,
-            method: err.config.method,
-            headers: err.config.headers,
-          }
-        });
-        
-        // Try to extract HTML error message if present
-        if (typeof err.response.data === 'string' && err.response.data.includes('<pre>')) {
-          const errorMessage = err.response.data.match(/<pre>(.*?)<\/pre>/s);
-          if (errorMessage && errorMessage[1]) {
-            console.error("Server error details:", errorMessage[1].trim());
-            setError(`Server error: ${errorMessage[1].trim().split('\n')[0]}`);
-          } else {
-            setError(`Server error (500): ${err.message}`);
-          }
-        } else {
-          setError(`Server error (500): ${err.message}`);
-        }
-      } else if (err.response) {
-        setError(`Error ${err.response.status}: ${err.response.data?.message || err.response.data || err.message}`);
-      } else if (err.request) {
-        setError("No response from server. Please check your connection.");
       } else {
-        setError(`Failed to upload item: ${err.message}`);
+        setError(err.response?.data?.message || "Failed to upload item");
       }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (loadError) {
+    return <div>Error loading maps: {loadError.message}</div>;
+  }
+
+  if (!isLoaded) {
+    return <div>Loading maps...</div>;
+  }
 
   return (
     <div className="container mt-4">
@@ -237,7 +309,7 @@ const ItemUpload: FC = () => {
         >
           <FontAwesomeIcon icon={faArrowLeft} /> Back
         </button>
-        <h1 className="mb-0">Upload {formData.itemType === 'lost' ? 'Lost' : 'Found'} Item</h1>
+        <h1 className="mb-0">Upload {formData.kind === 'lost' ? 'Lost' : 'Found'} Item</h1>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
@@ -247,7 +319,7 @@ const ItemUpload: FC = () => {
           <div className="card-body">
             <h2 className="card-title">Match Results</h2>
             <p className="card-text">
-              We found potential matches for your {formData.itemType} item!
+              We found potential matches for your {formData.kind} item!
             </p>
             
             <div className="row">
@@ -285,9 +357,9 @@ const ItemUpload: FC = () => {
             <div className="mt-4">
               <button 
                 className="btn btn-outline-secondary me-3"
-                onClick={() => navigate(formData.itemType === 'lost' ? '/lost-items' : '/found-items')}
+                onClick={() => navigate(formData.kind === 'lost' ? '/lost-items' : '/found-items')}
               >
-                Go to {formData.itemType === 'lost' ? 'Lost' : 'Found'} Items
+                Go to {formData.kind === 'lost' ? 'Lost' : 'Found'} Items
               </button>
             </div>
           </div>
@@ -306,7 +378,7 @@ const ItemUpload: FC = () => {
                       id="itemType"
                       name="itemType"
                       className="form-select"
-                      value={formData.itemType}
+                      value={formData.kind}
                       onChange={handleChange}
                       required
                     >
@@ -343,7 +415,7 @@ const ItemUpload: FC = () => {
                         className="form-select"
                         id="category"
                         name="category"
-                        value={formData.category}
+                        value={formData.itemType}
                         onChange={handleChange}
                         required
                       >
@@ -357,7 +429,7 @@ const ItemUpload: FC = () => {
                     </div>
                   )}
 
-                  {formData.category === "other" && (
+                  {formData.itemType === "other" && (
                     <div className="mb-3">
                       <label htmlFor="otherCategory" className="form-label">
                         Specify Item Type
@@ -389,23 +461,6 @@ const ItemUpload: FC = () => {
                   </div>
                   
                   <div className="mb-3">
-                    <label htmlFor="location" className="form-label">
-                      <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="location"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleChange}
-                      placeholder="Where was the item lost/found?"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="mb-3">
                     <label htmlFor="date" className="form-label">
                       <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
                       Date
@@ -419,6 +474,76 @@ const ItemUpload: FC = () => {
                       onChange={handleChange}
                       required
                     />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">
+                      <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
+                      Location
+                    </label>
+                    <div className="mb-2">
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary"
+                        onClick={handleGetCurrentLocation}
+                      >
+                        <FontAwesomeIcon icon={faLocationCrosshairs} className="me-2" />
+                        Use My Current Location
+                      </button>
+                    </div>
+                    
+                    {/* Map container - this div will be used as the map's container */}
+                    <div 
+                      ref={mapContainerRef} 
+                      style={mapContainerStyle} 
+                      className="border rounded"
+                    ></div>
+                    
+                    {/* Fallback UI when map fails to load */}
+                    {(!isLoaded || loadError) && (
+                      <div className="mt-3">
+                        <p className="text-muted mb-2">Enter coordinates manually:</p>
+                        <div className="input-group mb-3">
+                          <span className="input-group-text">Latitude</span>
+                          <input 
+                            type="number" 
+                            className="form-control"
+                            value={formData.location.lat}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              location: {
+                                ...prev.location,
+                                lat: parseFloat(e.target.value) || prev.location.lat
+                              }
+                            }))}
+                            step="0.000001"
+                          />
+                        </div>
+                        <div className="input-group">
+                          <span className="input-group-text">Longitude</span>
+                          <input 
+                            type="number" 
+                            className="form-control"
+                            value={formData.location.lng}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              location: {
+                                ...prev.location,
+                                lng: parseFloat(e.target.value) || prev.location.lng
+                              }
+                            }))}
+                            step="0.000001"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <small className="form-text text-muted mt-2">
+                      {isLoaded && !loadError 
+                        ? "Click on the map to set location or drag the marker"
+                        : "Enter coordinates manually or use current location"
+                      }
+                    </small>
                   </div>
                 </div>
               </div>
@@ -438,13 +563,14 @@ const ItemUpload: FC = () => {
                       name="image"
                       accept="image/*"
                       onChange={handleImageChange}
+                      required
                     />
                     <small className="form-text text-muted">
                       An image helps in identifying the item.
                     </small>
                   </div>
                   
-                  {imagePreview && (
+                  {imagePreview ? (
                     <div className="mb-3 text-center">
                       <img
                         src={imagePreview}
@@ -453,9 +579,7 @@ const ItemUpload: FC = () => {
                         style={{ maxHeight: "300px" }}
                       />
                     </div>
-                  )}
-                  
-                  {!imagePreview && (
+                  ) : (
                     <div className="text-center py-5 border rounded mb-3">
                       <FontAwesomeIcon icon={faCamera} size="3x" className="text-secondary mb-3" />
                       <p className="text-muted">No image uploaded</p>
@@ -480,7 +604,7 @@ const ItemUpload: FC = () => {
               ) : (
                 <span>
                   <FontAwesomeIcon icon={faUpload} className="me-2" />
-                  Upload {formData.itemType === 'lost' ? 'Lost' : 'Found'} Item
+                  Upload {formData.kind === 'lost' ? 'Lost' : 'Found'} Item
                 </span>
               )}
             </button>

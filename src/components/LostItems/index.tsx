@@ -67,6 +67,37 @@ const LostItems: FC = () => {
     }
   };
 
+  // Add a new function to format location objects as strings
+  const formatLocation = (location: any): string => {
+    if (!location) return "Unknown location";
+    
+    // If location is already a string, return it
+    if (typeof location === 'string') return location;
+    
+    // If location is an object with lat and lng properties
+    if (location && typeof location === 'object') {
+      // Check if it's a stringified JSON
+      if (typeof location === 'string') {
+        try {
+          const parsedLocation = JSON.parse(location);
+          if (parsedLocation.lat && parsedLocation.lng) {
+            return `Lat: ${parsedLocation.lat.toFixed(4)}, Lng: ${parsedLocation.lng.toFixed(4)}`;
+          }
+        } catch (e) {
+          // Not a valid JSON string
+        }
+      }
+      
+      // Direct object access
+      if (location.lat !== undefined && location.lng !== undefined) {
+        return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
+      }
+    }
+    
+    // If we can't parse it properly, convert to string
+    return String(location);
+  };
+
   const getItemProperty = (item: any, property: string): string | undefined => {
     // First check direct property access
     if (item && item.hasOwnProperty(property)) {
@@ -326,7 +357,7 @@ const LostItems: FC = () => {
                       </p>
                       <p className="card-text mb-1">
                         <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                        {item.location || getItemProperty(item, 'location') || 'Unknown location'}
+                        {formatLocation(item.location || getItemProperty(item, 'location'))}
                       </p>
                       <p className="card-text">
                         <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />

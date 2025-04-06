@@ -174,69 +174,45 @@ const getItemsByUser = (userId: string) => {
   };
 };
 
-const addItem = async (item: Omit<Item, '_id'>, image?: File) => {
+const addItem = async (formData: FormData) => {
   try {
-    // Verify item data structure
-    if (!item.name || !item.description || !item.category || !item.location || !item.date || !item.itemType || !item.owner) {
-      console.error("Missing required item fields:", item);
-      throw new Error("Missing required item fields");
+    // Log what we're sending for debugging
+    console.log("Sending form data to backend:");
+    
+    // Log each key-value pair in the FormData
+    for (const pair of formData.entries()) {
+      // Don't log the image binary data itself (too large), just note its presence
+      if (pair[0] === 'image') {
+        const file = pair[1] as File;
+        console.log(`${pair[0]}: [File] ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+      } else {
+        console.log(`${pair[0]}: ${pair[1]}`);
+      }
     }
     
-    const itemData = {
-      name: item.name,
-      description: item.description,
-      category: item.category,
-      location: item.location,
-      date: item.date,
-      itemType: item.itemType,
-      owner: item.owner
-    };
-    
-    console.log("Adding item data:", itemData);
-    
-    // If there's no image, use a simpler JSON approach
-    if (!image) {
-      console.log("No image provided - using direct JSON POST");
-      return apiClient.post('/items', itemData, {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-    }
-    
-    // If there is an image, use FormData
-    console.log("Image provided - using FormData");
-    const formData = new FormData();
-    
-    // Try multiple approaches to sending the item data with FormData
-    
-    // Approach 1: Add each field individually
-    Object.entries(itemData).forEach(([key, value]) => {
-      formData.append(key, value as string);
-    });
-    
-    // Approach 2: Also add the item as JSON string (some backends might expect this format)
-    formData.append('itemData', JSON.stringify(itemData));
-    
-    // Add the image
-    console.log("Adding image to FormData:", image.name, image.type, image.size, "bytes");
-    formData.append('image', image, image.name);
-    
-    console.log("Sending item data with apiClient (using interceptors)");
-    
-    // Use the apiClient with interceptors
     return apiClient.post('/items', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       }
     });
   } catch (error: any) {
-    console.error("Error in addItem:", error.message);
+    console.error('Error in addItem:', error);
+    
+    // More detailed error information
     if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
       console.error("Response data:", error.response.data);
       console.error("Response status:", error.response.status);
       console.error("Response headers:", error.response.headers);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error("No response received:", error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error("Request setup error:", error.message);
     }
+    
     throw error;
   }
 };

@@ -3,8 +3,29 @@
 import axios, { CanceledError } from "axios";
 export { CanceledError };
 
+// Get API URL based on current environment
+const getApiUrl = () => {
+  // Get the current frontend URL
+  const currentUrl = window.location.origin;
+  // If we're on localhost, use explicit port 3000 for backend
+  if (currentUrl.includes('localhost')) {
+    return 'http://localhost:3000';
+  }
+  // In production, assume backend is at the same domain (potentially different path)
+  return window.location.origin;
+};
+
 export const apiClient = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: getApiUrl(),
+  // Ensure cookies are sent with requests
+  withCredentials: true,
+  // Set needed headers for CORS
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    // Referer header is automatically set by the browser and can't be set manually
+    // Do not try to set it as browsers will block it as an unsafe header
+  }
 });
 
 // Add a request interceptor to include the JWT token in all requests
@@ -51,10 +72,17 @@ apiClient.interceptors.response.use(
         }
         
         console.log("Using refresh token:", refreshToken.substring(0, 10) + "...");
-        console.log("Making refresh token request to http://localhost:3000/auth/refresh");
+        console.log("Making refresh token request to " + getApiUrl() + "/auth/refresh");
         
-        const response = await axios.post("http://localhost:3000/auth/refresh", {
+        const response = await axios.post(getApiUrl() + "/auth/refresh", {
           refreshToken,
+        }, {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            // Remove Referer header here too
+          }
         });
         
         // Store new tokens

@@ -136,7 +136,7 @@ const ChatbotPage = () => {
     <FontAwesomeIcon icon={faArrowLeft} className="me-2" /> Back
   </button>
   <h1 className="text-primary text-center flex-grow-1 mb-3">
-   TripBuddy
+   Eureka
 </h1>
 </div>
       <div className="container d-flex flex-column vh-100 bg-light">
@@ -146,7 +146,7 @@ const ChatbotPage = () => {
         >  {messages.length === 0 && (
           <div className="d-flex justify-content-start mb-3">
             <div className="p-3 rounded bg-light border" style={{ maxWidth: "75%" }}>
-              <strong>Hey! I'm your TripBuddy.</strong> I'm here to recommend places to visit, restaurants, and attractions around the world. Ask me anything! 😊
+              <strong>Hey! I'm your Eureka.</strong> I'm here to recommend places to visit, restaurants, and attractions around the world. Ask me anything! 😊
             </div>
           </div>
         )}

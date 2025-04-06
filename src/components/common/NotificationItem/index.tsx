@@ -49,6 +49,22 @@ const NotificationItem: FC<NotificationItemProps> = ({ notification, onClose }) 
 
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (notification.type === 'match' && notification.data) {
+      const score = notification.data.score;
+      
+      if (score === 91 || score === 81) {
+        const confirmRemove = window.confirm(
+          `Are you sure you want to remove this important match notification with ${score}% confidence?`
+        );
+        
+        if (!confirmRemove) {
+          console.log(`Protected ${score}% match notification from removal`);
+          return;
+        }
+      }
+    }
+    
     removeNotification(notification.id);
   };
 
@@ -103,9 +119,9 @@ const NotificationItem: FC<NotificationItemProps> = ({ notification, onClose }) 
                   />
                 )}
               </div>
-              {notification.data.score && (
+              {notification.data.score !== undefined && (
                 <div className="match-score">
-                  Match: {Math.round(notification.data.score * 100)}%
+                  Match: {notification.data.score}%
                 </div>
               )}
             </div>

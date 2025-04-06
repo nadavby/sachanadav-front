@@ -91,6 +91,25 @@ const Dashboard: React.FC = () => {
     applyFilters(items, activeTab, query);
   };
 
+  // Add a function to format location objects as strings
+  const formatLocation = (location: any): string => {
+    if (!location) return "Unknown location";
+    
+    // If location is already a string, return it
+    if (typeof location === 'string') return location;
+    
+    // If location is an object with lat and lng properties
+    if (location && typeof location === 'object') {
+      // Direct object access
+      if (location.lat !== undefined && location.lng !== undefined) {
+        return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
+      }
+    }
+    
+    // If we can't parse it properly, convert to string
+    return String(location);
+  };
+
   if (loading) {
     return (
       <div className="container mt-5 text-center">
@@ -242,7 +261,7 @@ const Dashboard: React.FC = () => {
                   <p className="card-text mb-2 text-truncate">{item.description}</p>
                   <div className="item-details mb-3">
                     <div><strong>Category:</strong> {item.category}</div>
-                    <div><strong>Location:</strong> {item.location}</div>
+                    <div><strong>Location:</strong> {formatLocation(item.location)}</div>
                     <div><strong>Date:</strong> {new Date(item.date).toLocaleDateString()}</div>
                   </div>
                   
