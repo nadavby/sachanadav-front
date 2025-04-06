@@ -13,6 +13,7 @@ import {
   faMapMarkerAlt,
   faCalendarAlt
 } from "@fortawesome/free-solid-svg-icons";
+import { itemCategories, ItemCategoryGroup } from "../../data/itemCategories";
 
 const ItemUpload: FC = () => {
   const navigate = useNavigate();
@@ -22,25 +23,68 @@ const ItemUpload: FC = () => {
     name: "",
     description: "",
     category: "",
+    categoryLabel: "",
     location: "",
     date: new Date().toISOString().split('T')[0],
     itemType: "lost" as "lost" | "found",
   });
   
+  const [selectedCategoryGroup, setSelectedCategoryGroup] = useState<ItemCategoryGroup | null>(null);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchResults, setMatchResults] = useState<any[] | null>(null);
+  const [otherCategory, setOtherCategory] = useState<string>("");
 
   if (!loading && !isAuthenticated) {
     navigate("/login");
     return null;
   }
 
+  const handleCategoryGroupChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const groupLabel = e.target.value;
+    const group = itemCategories.find(g => g.label === groupLabel) || null;
+    setSelectedCategoryGroup(group);
+    setFormData({
+      ...formData,
+      category: "",
+      categoryLabel: "",
+      name: ""
+    });
+    setOtherCategory("");
+  };
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    
+    if (name === "category") {
+      const selectedOption = selectedCategoryGroup?.options.find(option => option.value === value);
+      
+      setFormData({
+        ...formData,
+        category: value,
+        categoryLabel: selectedOption?.label || value,
+        name: selectedOption?.label || value // Set the name to match the selected category item
+      });
+      
+      if (value !== "other") {
+        setOtherCategory("");
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleOtherCategoryChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setOtherCategory(value);
+    setFormData({
+      ...formData,
+      category: "other",
+      categoryLabel: value || "Other",
+      name: value || "Other"
+    });
   };
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -257,7 +301,7 @@ const ItemUpload: FC = () => {
                   <h5 className="card-title mb-4">Item Information</h5>
                   
                   <div className="mb-3">
-                    <label htmlFor="itemType" className="form-label">Item Type</label>
+                    <label htmlFor="itemType" className="form-label">Lost/Found</label>
                     <select
                       id="itemType"
                       name="itemType"
@@ -270,20 +314,65 @@ const ItemUpload: FC = () => {
                       <option value="found">Found Item</option>
                     </select>
                   </div>
-                  
+
                   <div className="mb-3">
-                    <label htmlFor="name" className="form-label">Item Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder="Enter item name"
+                    <label htmlFor="categoryGroup" className="form-label">
+                      <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
+                      Category Group
+                    </label>
+                    <select
+                      className="form-select"
+                      id="categoryGroup"
+                      value={selectedCategoryGroup?.label || ""}
+                      onChange={handleCategoryGroupChange}
                       required
-                    />
+                    >
+                      <option value="">Select a category group</option>
+                      {itemCategories.map((group) => (
+                        <option key={group.label} value={group.label}>
+                          {group.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+
+                  {selectedCategoryGroup && (
+                    <div className="mb-3">
+                      <label htmlFor="category" className="form-label">Item Type</label>
+                      <select
+                        className="form-select"
+                        id="category"
+                        name="category"
+                        value={formData.category}
+                        onChange={handleChange}
+                        required
+                      >
+                        <option value="">Select an item type</option>
+                        {selectedCategoryGroup.options.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {formData.category === "other" && (
+                    <div className="mb-3">
+                      <label htmlFor="otherCategory" className="form-label">
+                        Specify Item Type
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="otherCategory"
+                        value={otherCategory}
+                        onChange={handleOtherCategoryChange}
+                        placeholder="Please specify the item type"
+                        required
+                      />
+                    </div>
+                  )}
                   
                   <div className="mb-3">
                     <label htmlFor="description" className="form-label">Description</label>
@@ -295,23 +384,6 @@ const ItemUpload: FC = () => {
                       value={formData.description}
                       onChange={handleChange}
                       placeholder="Describe the item in detail"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="category" className="form-label">
-                      <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
-                      Category
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="category"
-                      name="category"
-                      value={formData.category}
-                      onChange={handleChange}
-                      placeholder="e.g. Electronics, Clothing, Jewelry"
                       required
                     />
                   </div>

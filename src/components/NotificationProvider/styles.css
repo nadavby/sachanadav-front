@@ -1,0 +1,42 @@
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1050;
+  max-width: 350px;
+}
+
+.notification-toast {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 1rem;
+  transition: transform 0.2s ease-in-out;
+}
+
+.notification-toast:hover {
+  transform: translateY(-2px);
+}
+
+.notification-details {
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #dee2e6;
+  font-size: 0.9rem;
+}
+
+.notification-toast .toast-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0.75rem 1rem;
+}
+
+.notification-toast .toast-body {
+  padding: 1rem;
+}
+
+.notification-toast .btn-close {
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  margin: -0.5rem -0.5rem -0.5rem auto;
+} 

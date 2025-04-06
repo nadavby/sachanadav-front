@@ -1,13 +1,10 @@
 /** @format */
 
 import { FC } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faUser,
-  faSignInAlt,
-  faSignOutAlt,
   faSearch,
   faUpload,
   faHome
@@ -15,14 +12,8 @@ import {
 import NotificationBell from "../common/NotificationBell";
 
 const Navigation: FC = () => {
-  const { isAuthenticated, loading, currentUser, logout } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-  
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
   
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -77,55 +68,12 @@ const Navigation: FC = () => {
           </ul>
           
           <ul className="navbar-nav">
-            {!loading && (
-              isAuthenticated ? (
-                <>
-                  <li className="nav-item">
-                    <div className="nav-link">
-                      <NotificationBell />
-                    </div>
-                  </li>
-                  <li className="nav-item">
-                    <Link
-                      to="/profile"
-                      className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}
-                    >
-                      <FontAwesomeIcon icon={faUser} className="me-1" />
-                      {currentUser?.userName || 'Profile'}
-                    </Link>
-                  </li>
-                  <li className="nav-item">
-                    <button
-                      className="nav-link btn btn-link"
-                      onClick={handleLogout}
-                    >
-                      <FontAwesomeIcon icon={faSignOutAlt} className="me-1" />
-                      Logout
-                    </button>
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li className="nav-item">
-                    <Link
-                      to="/login"
-                      className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
-                    >
-                      <FontAwesomeIcon icon={faSignInAlt} className="me-1" />
-                      Login
-                    </Link>
-                  </li>
-                  <li className="nav-item">
-                    <Link
-                      to="/register"
-                      className={`nav-link ${location.pathname === '/register' ? 'active' : ''}`}
-                    >
-                      <FontAwesomeIcon icon={faUser} className="me-1" />
-                      Register
-                    </Link>
-                  </li>
-                </>
-              )
+            {!loading && isAuthenticated && (
+              <li className="nav-item">
+                <div className="nav-link">
+                  <NotificationBell />
+                </div>
+              </li>
             )}
           </ul>
         </div>

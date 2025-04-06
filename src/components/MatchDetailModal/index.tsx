@@ -1,5 +1,6 @@
 import { FC, useEffect, useState } from 'react';
-import { Modal, Button } from 'react-bootstrap';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faUser, faCheckCircle, faPercentage } from '@fortawesome/free-solid-svg-icons';
 import './styles.css';
