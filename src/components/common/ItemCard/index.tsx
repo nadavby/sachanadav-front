@@ -58,6 +58,25 @@ const ItemCard: React.FC<ItemCardProps> = ({
     }
   };
 
+  // Add a function to format location objects as strings
+  const formatLocation = (location: any): string => {
+    if (!location) return "Unknown location";
+    
+    // If location is already a string, return it
+    if (typeof location === 'string') return location;
+    
+    // If location is an object with lat and lng properties
+    if (location && typeof location === 'object') {
+      // Direct object access
+      if (location.lat !== undefined && location.lng !== undefined) {
+        return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
+      }
+    }
+    
+    // If we can't parse it properly, convert to string
+    return String(location);
+  };
+
   return (
     <div className={`item-card ${compact ? 'item-card-compact' : ''} ${className}`}>
       {item.isResolved && (
@@ -118,7 +137,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
           </div>
           <div className="item-card-detail">
             <FontAwesomeIcon icon={faMapMarkerAlt} className="item-card-icon" />
-            <span>{item.location || getItemProperty(item, 'location') || 'Unknown location'}</span>
+            <span>{formatLocation(item.location || getItemProperty(item, 'location'))}</span>
           </div>
           <div className="item-card-detail">
             <FontAwesomeIcon icon={faCalendarAlt} className="item-card-icon" />

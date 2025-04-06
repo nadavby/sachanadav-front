@@ -139,7 +139,7 @@ const ListPosts: FC = () => {
           ))}
       <div className="text-center">
       <h1 className="text-primary text-center flex-grow-1 mb-3">
-   TripBuddy
+   Eureka
 </h1>
         <p className="lead text-muted">
           Your go-to travel companion for discovering amazing places!
@@ -147,7 +147,7 @@ const ListPosts: FC = () => {
       </div>
       <button className="btn btn-info d-flex flex-column align-items-center justify-content-center text-center p-3" style={{ width: "100px", height: "100px" }} onClick={() => navigate("/chatbot")}>
     <FontAwesomeIcon icon={faRobot} size="2x" />
-    <span className="mt-2">Ask TripBuddy</span>
+    <span className="mt-2">Ask Eureka</span>
   </button>
       </div>
       <hr className="border border-primary border-2 opacity-75 my-4" />

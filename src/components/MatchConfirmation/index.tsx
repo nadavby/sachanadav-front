@@ -120,6 +120,25 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     setConfirmStep(step => step - 1);
   };
 
+  // Add a function to format location objects as strings
+  const formatLocation = (location: any): string => {
+    if (!location) return "Unknown location";
+    
+    // If location is already a string, return it
+    if (typeof location === 'string') return location;
+    
+    // If location is an object with lat and lng properties
+    if (location && typeof location === 'object') {
+      // Direct object access
+      if (location.lat !== undefined && location.lng !== undefined) {
+        return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
+      }
+    }
+    
+    // If we can't parse it properly, convert to string
+    return String(location);
+  };
+
   if (loading) {
     return (
       <div className="container mt-5 text-center">
@@ -269,7 +288,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
                     <p className="card-text">{item.description}</p>
                     <ul className="list-group list-group-flush mb-3">
                       <li className="list-group-item"><strong>Category:</strong> {item.category}</li>
-                      <li className="list-group-item"><strong>Location:</strong> {item.location}</li>
+                      <li className="list-group-item"><strong>Location:</strong> {formatLocation(item.location)}</li>
                       <li className="list-group-item"><strong>Date:</strong> {new Date(item.date).toLocaleDateString()}</li>
                     </ul>
                   </div>
@@ -293,7 +312,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
                     <p className="card-text">{matchedItem.description}</p>
                     <ul className="list-group list-group-flush mb-3">
                       <li className="list-group-item"><strong>Category:</strong> {matchedItem.category}</li>
-                      <li className="list-group-item"><strong>Location:</strong> {matchedItem.location}</li>
+                      <li className="list-group-item"><strong>Location:</strong> {formatLocation(matchedItem.location)}</li>
                       <li className="list-group-item"><strong>Date:</strong> {new Date(matchedItem.date).toLocaleDateString()}</li>
                     </ul>
                     

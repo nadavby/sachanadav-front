@@ -1,0 +1,149 @@
+/* Basic navbar styling */
+.navbar {
+  padding: 0.75rem 1rem;
+}
+
+/* Container layout for the three-part navigation */
+.navbar .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+/* Ensure logo, notification, and hamburger are all properly sized */
+.navbar-brand {
+  margin-right: 0;
+  font-size: 1.25rem;
+}
+
+/* Style the center notification container */
+.notification-center-container {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Hamburger button styling */
+.navbar-toggler {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: transparent;
+}
+
+.navbar-toggler:focus {
+  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+  outline: none;
+}
+
+/* Animated hamburger icon */
+.navbar-toggler-icon {
+  transition: transform 0.3s ease;
+}
+
+.navbar-toggler[aria-expanded="true"] .navbar-toggler-icon {
+  transform: rotate(90deg);
+}
+
+/* Collapsible menu container */
+.navbar-collapse-container {
+  position: fixed;
+  top: 56px; /* Height of navbar */
+  left: 0;
+  right: 0;
+  background-color: #0d6efd; /* Match navbar bg-primary color */
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  z-index: 1000;
+}
+
+.navbar-collapse-container.show {
+  max-height: calc(100vh - 56px);
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Menu items styling */
+.navbar-nav {
+  padding: 0.5rem 1rem;
+}
+
+.nav-item {
+  padding: 0.25rem 0;
+}
+
+.nav-link {
+  padding: 0.75rem 1rem !important;
+  border-radius: 4px;
+  color: white !important;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: bold;
+}
+
+/* Empty space to balance the hamburger button */
+.navbar-toggler-width {
+  width: 56px; /* Same width as hamburger button */
+}
+
+/* Center brand and notification bell */
+.navbar-brand-container {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+/* Ensure menu opens properly on mobile */
+@media (max-width: 991.98px) {
+  .navbar-collapse {
+    transition: all 0.3s ease;
+    max-height: 0;
+    overflow: hidden;
+    margin-top: 1rem;
+  }
+  
+  .navbar-collapse.show {
+    max-height: 500px; /* Adjust as needed to fit all menu items */
+    overflow-y: auto;
+  }
+  
+  /* Add spacing between menu items on mobile */
+  .nav-item {
+    padding: 0.25rem 0;
+  }
+  
+  /* Ensure menu items are clearly visible */
+  .nav-link {
+    padding: 0.5rem 1rem !important;
+    border-radius: 4px;
+  }
+  
+  .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Always keep notification bell visible and properly styled */
+.notification-bell-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+} 

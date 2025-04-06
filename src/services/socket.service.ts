@@ -19,6 +19,18 @@ export interface MatchNotification {
 
 export type NotificationCallback = (notification: MatchNotification) => void;
 
+// Get API URL based on current environment
+const getApiUrl = () => {
+  // Get the current frontend URL
+  const currentUrl = window.location.origin;
+  // If we're on localhost, use explicit port 3000 for backend
+  if (currentUrl.includes('localhost')) {
+    return 'http://localhost:3000';
+  }
+  // In production, assume backend is at the same domain (potentially different path)
+  return window.location.origin;
+};
+
 class SocketService {
   private socket: Socket | null = null;
   private notificationCallbacks: NotificationCallback[] = [];
@@ -26,19 +38,35 @@ class SocketService {
   private readonly maxReconnectAttempts = 5;
   private readonly reconnectDelay = 3000; // 3 seconds
 
+  // Get access to the socket instance
+  getSocket(): Socket {
+    if (!this.socket) {
+      this.connect();
+    }
+    return this.socket!;
+  }
+
   connect() {
     if (this.socket?.connected) {
       console.log('Socket already connected');
       return;
     }
 
-    this.socket = io('http://localhost:3000', {
-      reconnection: true,
-      reconnectionDelay: this.reconnectDelay,
-      reconnectionAttempts: this.maxReconnectAttempts,
-    });
+    try {
+      console.log(`Attempting to connect to socket server at ${getApiUrl()}`);
+      
+      this.socket = io(getApiUrl(), {
+        reconnection: true,
+        reconnectionDelay: this.reconnectDelay,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        withCredentials: true, // Important for CORS with credentials
+        transports: ['websocket', 'polling'], // Try websocket first, fall back to polling
+      });
 
-    this.setupEventListeners();
+      this.setupEventListeners();
+    } catch (error) {
+      console.error('Error initializing socket:', error);
+    }
   }
 
   private setupEventListeners() {
@@ -80,6 +108,7 @@ class SocketService {
       return;
     }
 
+    console.log('Authenticating socket with user ID:', userId);
     this.socket.emit('authenticate', { userId });
   }
 
@@ -106,7 +135,9 @@ class SocketService {
   // Method to manually reconnect if needed
   reconnect() {
     this.disconnect();
-    this.connect();
+    setTimeout(() => {
+      this.connect();
+    }, 1000);
   }
 }
 

@@ -1,80 +1,94 @@
 /** @format */
 
-import { FC } from "react";
+import { FC, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSearch,
   faUpload,
-  faHome
+  faHome,
+  faLightbulb
 } from "@fortawesome/free-solid-svg-icons";
 import NotificationBell from "../common/NotificationBell";
+import "./styles.css"; // We'll create this file for custom styles
 
 const Navigation: FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+  
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
   
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav className="navbar navbar-dark bg-primary">
       <div className="container">
-        <Link className="navbar-brand d-flex align-items-center" to="/">
-          <FontAwesomeIcon icon={faHome} className="me-2" />
-          <span>TripBuddy</span>
-        </Link>
+        {/* Left side: Logo */}
+        <div className="order-0">
+          <Link className="navbar-brand d-flex align-items-center" to="/" onClick={closeMenu}>
+            <FontAwesomeIcon icon={faLightbulb} className="me-2" />
+            <span>Eureka</span>
+          </Link>
+        </div>
         
+        {/* Center: Notification bell */}
+        <div className="notification-center-container order-1">
+          {!loading && isAuthenticated && (
+            <NotificationBell />
+          )}
+        </div>
+        
+        {/* Right side: Hamburger button */}
         <button
-          className="navbar-toggler"
+          className="navbar-toggler order-2"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
+          onClick={toggleMenu}
+          aria-controls="navbarNav"
+          aria-expanded={isMenuOpen}
+          aria-label="Toggle navigation"
         >
           <span className="navbar-toggler-icon"></span>
         </button>
         
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav me-auto">
-            {isAuthenticated && (
-              <>
-                <li className="nav-item">
-                  <Link
-                    to="/lost-items"
-                    className={`nav-link ${location.pathname === '/lost-items' ? 'active' : ''}`}
-                  >
-                    <FontAwesomeIcon icon={faSearch} className="me-1" />
-                    Lost Items
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    to="/found-items"
-                    className={`nav-link ${location.pathname === '/found-items' ? 'active' : ''}`}
-                  >
-                    <FontAwesomeIcon icon={faSearch} className="me-1" />
-                    Found Items
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    to="/upload-item"
-                    className={`nav-link ${location.pathname === '/upload-item' ? 'active' : ''}`}
-                  >
-                    <FontAwesomeIcon icon={faUpload} className="me-1" />
-                    Upload Item
-                  </Link>
-                </li>
-              </>
-            )}
-          </ul>
-          
+        {/* Collapsible menu (always collapsed by default) */}
+        <div className={`navbar-collapse-container ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
           <ul className="navbar-nav">
-            {!loading && isAuthenticated && (
-              <li className="nav-item">
-                <div className="nav-link">
-                  <NotificationBell />
-                </div>
-              </li>
-            )}
+            <li className="nav-item">
+              <Link
+                to="/lost-items"
+                className={`nav-link ${location.pathname === '/lost-items' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <FontAwesomeIcon icon={faSearch} className="me-1" />
+                Lost Items
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                to="/found-items"
+                className={`nav-link ${location.pathname === '/found-items' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <FontAwesomeIcon icon={faSearch} className="me-1" />
+                Found Items
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link
+                to="/upload-item"
+                className={`nav-link ${location.pathname === '/upload-item' ? 'active' : ''}`}
+                onClick={closeMenu}
+              >
+                <FontAwesomeIcon icon={faUpload} className="me-1" />
+                Upload Item
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

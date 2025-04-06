@@ -145,6 +145,25 @@ const ItemDetail: React.FC = () => {
     }
   };
 
+  // Add a function to format location objects as strings
+  const formatLocation = (location: any): string => {
+    if (!location) return "Unknown location";
+    
+    // If location is already a string, return it
+    if (typeof location === 'string') return location;
+    
+    // If location is an object with lat and lng properties
+    if (location && typeof location === 'object') {
+      // Direct object access
+      if (location.lat !== undefined && location.lng !== undefined) {
+        return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
+      }
+    }
+    
+    // If we can't parse it properly, convert to string
+    return String(location);
+  };
+
   return (
     <div className="container mt-4 pb-5">
       <div className="d-flex align-items-center mb-4">
@@ -213,7 +232,7 @@ const ItemDetail: React.FC = () => {
                     </li>
                     <li className="list-group-item d-flex align-items-center px-0">
                       <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                      <strong className="me-2">Location:</strong> {item.location}
+                      <strong className="me-2">Location:</strong> {formatLocation(item.location)}
                     </li>
                     <li className="list-group-item d-flex align-items-center px-0">
                       <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
