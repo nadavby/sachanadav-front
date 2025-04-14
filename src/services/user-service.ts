@@ -86,7 +86,7 @@ const googleSignIn = async (credential: CredentialResponse) => {
       console.warn("No tokens returned from Google Sign-In!");
     }
 
-    return data; // החזר את המשתמש
+    return data; 
   } catch (error) {
     console.error("Google Sign-In failed:", error);
     throw error;

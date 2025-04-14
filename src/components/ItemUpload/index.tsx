@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
-import { FC, useState, ChangeEvent, FormEvent, useCallback, useEffect, useRef } from "react";
+import { FC, useState, ChangeEvent, FormEvent, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import itemService, { Item } from "../../services/item-service";
+import itemService from "../../services/item-service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUpload,
@@ -33,7 +34,7 @@ interface ItemFormData {
 }
 
 const defaultLocation = {
-  lat: 32.0853, // Default to Israel center
+  lat: 32.0853, 
   lng: 34.7818
 };
 
@@ -44,7 +45,6 @@ const mapContainerStyle = {
   borderRadius: "0.5rem"
 };
 
-// Libraries need to be defined outside the component to prevent re-renders
 const libraries = ["places"];
 
 const ItemUpload: FC = () => {
@@ -54,7 +54,6 @@ const ItemUpload: FC = () => {
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   
-  // Use state to store API key to prevent issues with direct access to import.meta.env
   const [apiKey] = useState(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyCqhXlqSGDjbIsC8sFcADsTV2z3nbuwLCs");
   
   const { isLoaded, loadError } = useLoadScript({
@@ -81,11 +80,9 @@ const ItemUpload: FC = () => {
   const [otherCategory, setOtherCategory] = useState<string>("");
   const [mapInitialized, setMapInitialized] = useState(false);
 
-  // Initialize the map when the script is loaded and the container is available
   useEffect(() => {
     if (isLoaded && !loadError && mapContainerRef.current && !mapInitialized) {
       try {
-        // Create the map instance
         const map = new window.google.maps.Map(mapContainerRef.current, {
           center: formData.location,
           zoom: 13,
@@ -95,14 +92,12 @@ const ItemUpload: FC = () => {
           zoomControl: true
         });
         
-        // Create the marker
         const marker = new window.google.maps.Marker({
           position: formData.location,
           map: map,
           draggable: true
         });
         
-        // Add click event listener to the map
         map.addListener('click', (e: google.maps.MapMouseEvent) => {
           if (e.latLng) {
             marker.setPosition(e.latLng);
@@ -116,7 +111,6 @@ const ItemUpload: FC = () => {
           }
         });
         
-        // Add drag end event listener to the marker
         marker.addListener('dragend', () => {
           const position = marker.getPosition();
           if (position) {
@@ -130,7 +124,6 @@ const ItemUpload: FC = () => {
           }
         });
         
-        // Store references
         googleMapRef.current = map;
         markerRef.current = marker;
         setMapInitialized(true);
@@ -141,7 +134,6 @@ const ItemUpload: FC = () => {
     }
   }, [isLoaded, loadError, mapInitialized, formData.location]);
   
-  // Update marker position when location changes
   useEffect(() => {
     if (mapInitialized && markerRef.current) {
       markerRef.current.setPosition(formData.location);
@@ -194,7 +186,6 @@ const ItemUpload: FC = () => {
     const { name, value } = e.target;
     
     if (name === "category") {
-      const selectedOption = selectedCategoryGroup?.options.find(option => option.value === value);
       setFormData(prev => ({
         ...prev,
         itemType: value
@@ -251,20 +242,16 @@ const ItemUpload: FC = () => {
     setError(null);
     
     try {
-      // Create FormData for multipart/form-data submission
       const submitData = new FormData();
       
-      // Add all form fields - using field names expected by the backend
-      // Map our frontend fields to what the backend expects
       submitData.append('name', formData.itemType === "other" && otherCategory ? otherCategory : formData.itemType); // Name comes from item type
       submitData.append('description', formData.description);
       submitData.append('category', formData.categoryGroup);
       submitData.append('location', formData.location ? JSON.stringify(formData.location) : '');
       submitData.append('date', formData.date);
-      submitData.append('itemType', formData.kind); // "lost" or "found"
+      submitData.append('itemType', formData.kind); 
       submitData.append('owner', currentUser._id);
       
-      // Add image if present
       if (uploadedImage) {
         submitData.append('image', uploadedImage);
       }
@@ -492,14 +479,12 @@ const ItemUpload: FC = () => {
                       </button>
                     </div>
                     
-                    {/* Map container - this div will be used as the map's container */}
                     <div 
                       ref={mapContainerRef} 
                       style={mapContainerStyle} 
                       className="border rounded"
                     ></div>
                     
-                    {/* Fallback UI when map fails to load */}
                     {(!isLoaded || loadError) && (
                       <div className="mt-3">
                         <p className="text-muted mb-2">Enter coordinates manually:</p>

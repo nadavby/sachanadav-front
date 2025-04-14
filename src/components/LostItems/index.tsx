@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState } from "react";
 import { useLostItems } from "../../hooks/useItems";
 import { useAuth } from "../../hooks/useAuth";
 import { Item } from "../../services/item-service";
@@ -55,9 +56,7 @@ const LostItems: FC = () => {
     if (!date) return "N/A";
     try {
       const dateObj = date instanceof Date ? date : new Date(date);
-      // Check if the date is valid
       if (isNaN(dateObj.getTime())) {
-        console.log("Invalid date value:", date);
         return "N/A";
       }
       return dateObj.toLocaleDateString();
@@ -67,16 +66,12 @@ const LostItems: FC = () => {
     }
   };
 
-  // Add a new function to format location objects as strings
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
     
-    // If location is already a string, return it
     if (typeof location === 'string') return location;
     
-    // If location is an object with lat and lng properties
     if (location && typeof location === 'object') {
-      // Check if it's a stringified JSON
       if (typeof location === 'string') {
         try {
           const parsedLocation = JSON.parse(location);
@@ -84,33 +79,28 @@ const LostItems: FC = () => {
             return `Lat: ${parsedLocation.lat.toFixed(4)}, Lng: ${parsedLocation.lng.toFixed(4)}`;
           }
         } catch (e) {
-          // Not a valid JSON string
+            console.error("Error parsing location:", e);
         }
       }
       
-      // Direct object access
       if (location.lat !== undefined && location.lng !== undefined) {
         return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
       }
     }
     
-    // If we can't parse it properly, convert to string
     return String(location);
   };
 
   const getItemProperty = (item: any, property: string): string | undefined => {
-    // First check direct property access
-    if (item && item.hasOwnProperty(property)) {
+    if (item && Object.prototype.hasOwnProperty.call(item, property)) {
       return item[property];
     }
     
-    // Then check in _doc if it exists (MongoDB objects often have data in _doc)
-    if (item && item._doc && item._doc.hasOwnProperty(property)) {
+    if (item && item._doc && Object.prototype.hasOwnProperty.call(item._doc, property)) {
       return item._doc[property];
     }
     
-    // Finally check in the item's fields if it exists
-    if (item && item.fields && item.fields.hasOwnProperty(property)) {
+    if (item && item.fields && Object.prototype.hasOwnProperty.call(item.fields, property)) {
       return item.fields[property];
     }
     
@@ -122,7 +112,6 @@ const LostItems: FC = () => {
     
     let filteredItems = items;
     
-    // Apply search filter
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filteredItems = filteredItems.filter(item => {
@@ -174,49 +163,8 @@ const LostItems: FC = () => {
     }
   };
 
-  // Debug log the first item's structure
-  useEffect(() => {
-    if (items.length > 0) {
-      console.log("LostItems Component - First item data structure:", items[0]);
-      // Check field access paths
-      const item = items[0];
-      console.log("Direct access:", {
-        name: item.name,
-        description: item.description,
-        category: item.category,
-        location: item.location,
-        date: item.date,
-        imgURL: item.imgURL,
-        _id: item._id,
-      });
-      console.log("_doc access:", (item as any)._doc ? {
-        name: (item as any)._doc.name,
-        description: (item as any)._doc.description,
-        category: (item as any)._doc.category,
-        location: (item as any)._doc.location,
-        date: (item as any)._doc.date,
-        imgURL: (item as any)._doc.imgURL,
-        _id: (item as any)._doc._id,
-      } : "No _doc property");
-      
-      // Test the getItemProperty function
-      console.log("getItemProperty access:", {
-        name: getItemProperty(item, 'name'),
-        description: getItemProperty(item, 'description'),
-        category: getItemProperty(item, 'category'),
-        location: getItemProperty(item, 'location'),
-        date: getItemProperty(item, 'date'),
-        imgURL: getItemProperty(item, 'imgURL'),
-        _id: getItemProperty(item, '_id'),
-      });
-    }
-  }, [items]);
-
   const getProperImageUrl = (url: string): string => {
-    if (!url) return '';
-    
-    console.log("LostItems - Original image URL:", url);
-    
+    if (!url) return '';    
     if (url.startsWith('http')) {
       return url;
     } else if (url.startsWith('/')) {
@@ -243,7 +191,7 @@ const LostItems: FC = () => {
           ))}
         <div className="text-center">
           <h1 className="text-primary text-center flex-grow-1 mb-3">
-            Lost Items
+            Eureka
           </h1>
           <p className="lead text-muted">
             Browse lost items or upload your own
@@ -314,11 +262,10 @@ const LostItems: FC = () => {
       {sortedItems.length > 0 && (
         <div className="row">
           {sortedItems.map((item: Item) => {
-            // Ensure we have a valid _id for the key
             const itemId = item._id || getItemProperty(item, '_id');
             if (!itemId) {
               console.error("Item without _id found:", item);
-              return null; // Skip items without an ID
+              return null; 
             }
             
             const imgURL = item.imgURL || getItemProperty(item, 'imgURL');
@@ -335,7 +282,6 @@ const LostItems: FC = () => {
                       onError={(e) => {
                         console.error("LostItems - Image failed to load:", imgURL);
                         console.log("LostItems - Image URL attempted:", getProperImageUrl(imgURL));
-                        // Try a secondary approach
                         setTimeout(() => {
                           if (imgURL && !imgURL.startsWith('http') && !imgURL.startsWith('/')) {
                             console.log("LostItems - Trying secondary image URL format...");

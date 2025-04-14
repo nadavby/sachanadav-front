@@ -19,15 +19,11 @@ export interface MatchNotification {
 
 export type NotificationCallback = (notification: MatchNotification) => void;
 
-// Get API URL based on current environment
 const getApiUrl = () => {
-  // Get the current frontend URL
   const currentUrl = window.location.origin;
-  // If we're on localhost, use explicit port 3000 for backend
   if (currentUrl.includes('localhost')) {
     return 'http://localhost:3000';
   }
-  // In production, assume backend is at the same domain (potentially different path)
   return window.location.origin;
 };
 
@@ -36,9 +32,8 @@ class SocketService {
   private notificationCallbacks: NotificationCallback[] = [];
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
-  private readonly reconnectDelay = 3000; // 3 seconds
+  private readonly reconnectDelay = 3000; 
 
-  // Get access to the socket instance
   getSocket(): Socket {
     if (!this.socket) {
       this.connect();
@@ -48,19 +43,16 @@ class SocketService {
 
   connect() {
     if (this.socket?.connected) {
-      console.log('Socket already connected');
       return;
     }
 
     try {
-      console.log(`Attempting to connect to socket server at ${getApiUrl()}`);
-      
       this.socket = io(getApiUrl(), {
         reconnection: true,
         reconnectionDelay: this.reconnectDelay,
         reconnectionAttempts: this.maxReconnectAttempts,
-        withCredentials: true, // Important for CORS with credentials
-        transports: ['websocket', 'polling'], // Try websocket first, fall back to polling
+        withCredentials: true, 
+        transports: ['websocket', 'polling'],
       });
 
       this.setupEventListeners();
@@ -73,12 +65,7 @@ class SocketService {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      console.log('Connected to socket server');
       this.reconnectAttempts = 0;
-    });
-
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from socket server');
     });
 
     this.socket.on('connect_error', (error) => {
@@ -92,7 +79,6 @@ class SocketService {
     });
 
     this.socket.on('notification', (notification: MatchNotification) => {
-      console.log('Received notification:', notification);
       this.notificationCallbacks.forEach(callback => callback(notification));
     });
   }
@@ -108,7 +94,6 @@ class SocketService {
       return;
     }
 
-    console.log('Authenticating socket with user ID:', userId);
     this.socket.emit('authenticate', { userId });
   }
 
@@ -132,7 +117,6 @@ class SocketService {
     return this.socket?.connected ?? false;
   }
 
-  // Method to manually reconnect if needed
   reconnect() {
     this.disconnect();
     setTimeout(() => {

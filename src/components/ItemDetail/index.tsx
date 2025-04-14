@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
 import React, { useEffect, useState } from 'react';
@@ -13,7 +14,7 @@ import {
   faExchangeAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../hooks/useAuth';
-import itemService, { Item, MatchResult } from '../../services/item-service';
+import itemService, { Item } from '../../services/item-service';
 import imageComparisonService from '../../services/imageComparisonService';
 import './ItemDetail.css';
 
@@ -40,7 +41,6 @@ const ItemDetail: React.FC = () => {
         const response = await request;
         setItem(response.data);
         
-        // Fetch matches for this item
         fetchMatches(id);
       } catch (error) {
         console.error('Error fetching item:', error);
@@ -57,17 +57,14 @@ const ItemDetail: React.FC = () => {
     try {
       setMatchesLoading(true);
       
-      // If the item already has match results, use those
       if (item?.matchResults && item.matchResults.length > 0) {
         setMatches(item.matchResults);
       } else {
-        // Otherwise fetch from the API
         const matchesData = await imageComparisonService.findMatches(itemId);
         setMatches(matchesData.matches || []);
       }
     } catch (error) {
       console.error('Error fetching matches:', error);
-      // Don't show an error for this, just hide the matches section
     } finally {
       setMatchesLoading(false);
     }
@@ -77,18 +74,15 @@ const ItemDetail: React.FC = () => {
     if (!id || !item) return;
     
     try {
-      // Call API to mark item as resolved
       await itemService.updateItem(id, { 
         ...item,
         isResolved: true,
-        resolvedWithItemId: matchId // If a match was selected
+        resolvedWithItemId: matchId 
       });
       
-      // Update local state
       setItem({ ...item, isResolved: true });
       setResolveDialogOpen(false);
       
-      // Show success message or redirect
       navigate(`/items/${item.itemType === 'lost' ? 'lost' : 'found'}`);
     } catch (error) {
       console.error('Error resolving item:', error);
@@ -145,22 +139,17 @@ const ItemDetail: React.FC = () => {
     }
   };
 
-  // Add a function to format location objects as strings
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
     
-    // If location is already a string, return it
     if (typeof location === 'string') return location;
     
-    // If location is an object with lat and lng properties
     if (location && typeof location === 'object') {
-      // Direct object access
       if (location.lat !== undefined && location.lng !== undefined) {
         return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
       }
     }
     
-    // If we can't parse it properly, convert to string
     return String(location);
   };
 
@@ -202,7 +191,6 @@ const ItemDetail: React.FC = () => {
                       onError={(e) => {
                         console.error("Image failed to load:", item.imgURL);
                         console.log("Image URL attempted:", getProperImageUrl(item.imgURL));
-                        // Try a secondary approach
                         setTimeout(() => {
                           if (item.imgURL && !item.imgURL.startsWith('http') && !item.imgURL.startsWith('/')) {
                             console.log("Trying secondary image URL format...");
@@ -288,7 +276,6 @@ const ItemDetail: React.FC = () => {
                               onError={(e) => {
                                 console.error("Match image failed to load:", match.itemImgURL);
                                 console.log("Match image URL attempted:", getProperImageUrl(match.itemImgURL));
-                                // Try a secondary approach
                                 setTimeout(() => {
                                   if (match.itemImgURL && !match.itemImgURL.startsWith('http') && !match.itemImgURL.startsWith('/')) {
                                     console.log("Trying secondary match image URL format...");
@@ -342,7 +329,6 @@ const ItemDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Resolve Confirmation Dialog */}
       {resolveDialogOpen && (
         <div className="modal fade show" style={{ display: 'block' }} tabIndex={-1}>
           <div className="modal-dialog modal-dialog-centered">
