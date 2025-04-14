@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
 import { FC, useState, useEffect } from "react";
@@ -12,8 +13,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faArrowLeft, 
   faImage, 
-  faEdit, 
-  faTrash,
   faMapMarkerAlt,
   faCalendarAlt,
   faTag
@@ -94,10 +93,8 @@ const UserProfile: FC = () => {
     }
   }, [watchProfileImage, tempImageURL]);
 
-  // Fetch matches for notifications
   useEffect(() => {
     if (items && items.length > 0) {
-      // Process the user's items to check for matches and create notifications
       fetchMatchNotifications(items);
     }
   }, [items, fetchMatchNotifications]);
@@ -161,7 +158,7 @@ const UserProfile: FC = () => {
       try {
         const { request } = userService.deleteUser(localUser._id);
         await request;
-        navigate("/login");
+        window.location.href = "/login";
       } catch (error) {
         console.error("Failed to delete user account:", error);
       }
@@ -171,7 +168,7 @@ const UserProfile: FC = () => {
   const handleLogout = async () => {
     try {
       await userService.logout();
-      navigate("/login");
+      window.location.href = "/login";
     } catch (error) {
       console.error("Failed to logout:", error);
     }
@@ -183,7 +180,6 @@ const UserProfile: FC = () => {
     try {
       const { request } = itemService.deleteItem(itemId);
       await request;
-      // Refresh page to show updated items
       window.location.reload();
     } catch (error) {
       console.error("Error deleting item:", error);
@@ -196,26 +192,22 @@ const UserProfile: FC = () => {
       const dateObj = date instanceof Date ? date : new Date(date);
       return dateObj.toLocaleDateString();
     } catch (error) {
+      console.error("Error formatting date:", error);
       return "N/A";
     }
   };
 
-  // Add a function to format location objects as strings
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
     
-    // If location is already a string, return it
     if (typeof location === 'string') return location;
     
-    // If location is an object with lat and lng properties
     if (location && typeof location === 'object') {
-      // Direct object access
       if (location.lat !== undefined && location.lng !== undefined) {
         return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
       }
     }
     
-    // If we can't parse it properly, convert to string
     return String(location);
   };
 
@@ -224,7 +216,6 @@ const UserProfile: FC = () => {
 
   const { ref: profileImageRef, ...profileImageRest } = register("profileImage");
 
-  // Separate lost and found items
   const lostItems = items.filter(item => item.itemType === 'lost');
   const foundItems = items.filter(item => item.itemType === 'found');
 
@@ -276,7 +267,6 @@ const UserProfile: FC = () => {
             
             <div className="col-md-9">
               {!isEditing ? (
-                // Read-only view
                 <>
                   <p>
                     <strong>Username:</strong> {localUser.userName || "Not set"}
@@ -307,7 +297,6 @@ const UserProfile: FC = () => {
                   </button>
                 </>
               ) : (
-                // Edit mode
                 <>
                   <div className="mb-3">
                     <label htmlFor="userName" className="form-label">Username:</label>
@@ -368,7 +357,6 @@ const UserProfile: FC = () => {
         </form>
       </div>
       
-      {/* Lost Items Section */}
       <div className="mt-4">
         <h3>My Lost Items</h3>
         {itemsLoading ? (
@@ -429,7 +417,6 @@ const UserProfile: FC = () => {
         )}
       </div>
       
-      {/* Found Items Section */}
       <div className="mt-4">
         <h3>My Found Items</h3>
         {itemsLoading ? (

@@ -1,6 +1,6 @@
 /** @format */
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState } from "react";
 import { useFoundItems } from "../../hooks/useItems";
 import { useAuth } from "../../hooks/useAuth";
 import { Item } from "../../services/item-service";
@@ -57,20 +57,18 @@ const FoundItems: FC = () => {
       const dateObj = date instanceof Date ? date : new Date(date);
       return dateObj.toLocaleDateString();
     } catch (error) {
+      console.error("Error formatting date:", error);
       return "N/A";
     }
   };
 
-  // Add a function to format location objects as strings
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
     
-    // If location is already a string, return it
     if (typeof location === 'string') return location;
     
-    // If location is an object with lat and lng properties
     if (location && typeof location === 'object') {
-      // Check if it's a stringified JSON
       if (typeof location === 'string') {
         try {
           const parsedLocation = JSON.parse(location);
@@ -78,34 +76,29 @@ const FoundItems: FC = () => {
             return `Lat: ${parsedLocation.lat.toFixed(4)}, Lng: ${parsedLocation.lng.toFixed(4)}`;
           }
         } catch (e) {
-          // Not a valid JSON string
+          console.error("Error parsing location:", e);
         }
       }
       
-      // Direct object access
       if (location.lat !== undefined && location.lng !== undefined) {
         return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
       }
     }
     
-    // If we can't parse it properly, convert to string
     return String(location);
   };
 
-  // Utility function to retrieve item property from possibly nested structures
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getItemProperty = (item: any, property: string) => {
-    // First check direct property access
-    if (item && item.hasOwnProperty(property)) {
+    if (item && Object.prototype.hasOwnProperty.call(item, property)) {
       return item[property];
     }
     
-    // Then check in _doc if it exists (MongoDB objects often have data in _doc)
-    if (item && item._doc && item._doc.hasOwnProperty(property)) {
+    if (item && item._doc && Object.prototype.hasOwnProperty.call(item._doc, property)) {
       return item._doc[property];
     }
     
-    // Finally check in the item's fields if it exists
-    if (item && item.fields && item.fields.hasOwnProperty(property)) {
+    if (item && item.fields && Object.prototype.hasOwnProperty.call(item.fields, property)) {
       return item.fields[property];
     }
     
@@ -117,7 +110,6 @@ const FoundItems: FC = () => {
     
     let filteredItems = items;
     
-    // Apply search filter
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filteredItems = filteredItems.filter(item => {
@@ -168,44 +160,6 @@ const FoundItems: FC = () => {
       default: return 'Sort by';
     }
   };
-
-  // Debug log the first item's structure
-  useEffect(() => {
-    if (items.length > 0) {
-      console.log("FoundItems Component - First item data structure:", items[0]);
-      // Check field access paths
-      const item = items[0];
-      console.log("Direct access:", {
-        name: item.name,
-        description: item.description,
-        category: item.category,
-        location: item.location,
-        date: item.date,
-        imgURL: item.imgURL,
-        _id: item._id,
-      });
-      console.log("_doc access:", (item as any)._doc ? {
-        name: (item as any)._doc.name,
-        description: (item as any)._doc.description,
-        category: (item as any)._doc.category,
-        location: (item as any)._doc.location,
-        date: (item as any)._doc.date,
-        imgURL: (item as any)._doc.imgURL,
-        _id: (item as any)._doc._id,
-      } : "No _doc property");
-      
-      // Test the getItemProperty function
-      console.log("getItemProperty access:", {
-        name: getItemProperty(item, 'name'),
-        description: getItemProperty(item, 'description'),
-        category: getItemProperty(item, 'category'),
-        location: getItemProperty(item, 'location'),
-        date: getItemProperty(item, 'date'),
-        imgURL: getItemProperty(item, 'imgURL'),
-        _id: getItemProperty(item, '_id'),
-      });
-    }
-  }, [items]);
 
   return (
     <div className="container mt-3">

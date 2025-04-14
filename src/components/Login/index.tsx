@@ -1,6 +1,6 @@
 import { FC, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import userService from "../../services/user-service";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faLock, faSignInAlt } from "@fortawesome/free-solid-svg-icons";
@@ -18,16 +18,15 @@ export const Login: FC = () => {
     formState: { errors },
   } = useForm<FormData>();
   const [serverError, setServerError] = useState("");
-  const navigate = useNavigate();
 
   const onSubmit = async (data: FormData) => {
     try {
-      const request = userService.login(data.email, data.password);
-      const response = await request;
+      const response = await userService.login(data.email, data.password);
 
-      if (response.accessToken && response.refreshToken) {
-        console.log("Login success :", response);
-        navigate("/lost-items");
+      if (response && response.accessToken && response.refreshToken) {
+        // After successful login, force a page reload to the lost items page
+        // This ensures all auth state is properly initialized
+        window.location.href = "/lost-items";
       }
     } catch (error) {
       setServerError("Incorrect email or password.");
@@ -36,18 +35,21 @@ export const Login: FC = () => {
   };
   
   const onGoogleLoginSuccess = async (response: CredentialResponse) => {
-    console.log(response);
     try {
       const googleRes = await userService.googleSignIn(response);
-      console.log(googleRes);
-      navigate("/lost-items");
+      
+      if (googleRes && googleRes.accessToken && googleRes.refreshToken) {
+        // After successful Google login, force a page reload to the lost items page
+        window.location.href = "/lost-items";
+      }
     } catch (error) {
       console.error(error);
+      setServerError("Google login failed. Please try again.");
     }
   };
 
-  const onGoogleLoginError = async () => {
-    console.log("Google login failed");
+  const onGoogleLoginError = () => {
+    setServerError("Google login failed. Please try again.");
   };
 
   return (

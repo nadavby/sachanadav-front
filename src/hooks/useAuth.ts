@@ -13,6 +13,7 @@ interface DecodedToken {
 export const useAuth = () => {
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [loading, setLoading] = useState(true);
+  
   const logout = useCallback(() => {
     userService.logout();
     setCurrentUser(null);
@@ -23,34 +24,39 @@ export const useAuth = () => {
     try {
       const user = await userService.getCurrentUser();
       setCurrentUser(user);
+      return !!user;
     } catch (error) {
       console.error("Failed to fetch user details", error);
       logout();
+      return false;
     }
   }, [logout]);
 
   const checkAuthState = useCallback(async () => {
     setLoading(true);
-      const timeoutId = setTimeout(() => {
+    
+    // Only set a timeout for initial auth check, not for manual updates
+    const timeoutId = setTimeout(() => {
       console.warn("Auth check timed out");
       setLoading(false);
     }, 5000);
+    
     let token = userService.getRefreshToken();
     if (!token) {
-      console.warn("No refresh token found, Checking for Google Account.");
       token = userService.getAccessToken();
     }
+    
     if (!token) {
-      console.warn("No access token found, logging out.");
       clearTimeout(timeoutId);
       logout();
-      return;
+      return false;
     }
+    
     try {
       const decoded = jwtDecode<DecodedToken>(token);
       const currentTime = Date.now() / 1000;
+      
       if (decoded.exp <= currentTime) {
-        console.log("Access token expired, attempting refresh.");
         try {
           const refreshResult = await userService.refresh();
           if (refreshResult) {
@@ -65,17 +71,19 @@ export const useAuth = () => {
           console.error("Token refresh failed:", refreshError);
           clearTimeout(timeoutId);
           logout();
-          return;
+          return false;
         }
       }
       
-      await fetchUserDetails();
+      const success = await fetchUserDetails();
       clearTimeout(timeoutId);
       setLoading(false);
+      return success;
     } catch (error) {
       console.error("Error decoding token or refreshing session:", error);
       clearTimeout(timeoutId);
       logout();
+      return false;
     }
   }, [logout, fetchUserDetails]);
 
