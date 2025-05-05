@@ -24,8 +24,6 @@ export const Login: FC = () => {
       const response = await userService.login(data.email, data.password);
 
       if (response && response.accessToken && response.refreshToken) {
-        // After successful login, force a page reload to the lost items page
-        // This ensures all auth state is properly initialized
         window.location.href = "/lost-items";
       }
     } catch (error) {
@@ -39,7 +37,6 @@ export const Login: FC = () => {
       const googleRes = await userService.googleSignIn(response);
       
       if (googleRes && googleRes.accessToken && googleRes.refreshToken) {
-        // After successful Google login, force a page reload to the lost items page
         window.location.href = "/lost-items";
       }
     } catch (error) {
@@ -61,8 +58,8 @@ export const Login: FC = () => {
               <div className="card-body">
                 <div className="text-center mb-4">
                   <img
-                    src="/favicon.jpg"
-                    alt="Boarding-pass Logo"
+                    src="/eureka.jpg"
+                    alt="Eureka Logo"
                     className="rounded"
                     style={{
                       width: "100px",
@@ -70,7 +67,6 @@ export const Login: FC = () => {
                       objectFit: "cover",
                     }}
                   />
-                  <h2 className="card-title mt-3">Boarding-pass</h2>
                 </div>
 
                 {serverError && (

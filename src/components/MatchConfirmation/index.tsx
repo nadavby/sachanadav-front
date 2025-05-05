@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -23,7 +24,6 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   
-  // Use either props or URL parameters
   const itemId = props.itemId || urlItemId;
   const matchId = props.matchId || urlMatchId;
   
@@ -53,17 +53,13 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     try {
       setLoading(true);
       
-      // Fetch the original item
       const { request: itemRequest } = itemService.getItemById(itemId!);
       const itemResponse = await itemRequest;
       setItem(itemResponse.data);
-      
-      // Fetch the matched item
       const { request: matchRequest } = itemService.getItemById(matchId!);
       const matchResponse = await matchRequest;
       setMatchedItem(matchResponse.data);
-      
-      // Find match details from the item's matchResults
+
       if (itemResponse.data.matchResults) {
         const match = itemResponse.data.matchResults.find(
           (m: MatchResult) => m.matchedItemId === matchId
@@ -87,20 +83,15 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     setIsSubmitting(true);
     
     try {
-      // Mark both items as resolved
       await itemService.updateItem(item._id!, {
         isResolved: true,
         resolvedWithItemId: matchedItem._id
       });
       
-      // Also mark the matched item as resolved
       await itemService.updateItem(matchedItem._id!, {
         isResolved: true,
         resolvedWithItemId: item._id
       });
-      
-      // TODO: In a real application, send notification to the other user
-      // with the contact details and message
       
       setConfirmationSuccess(true);
       
@@ -120,22 +111,17 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     setConfirmStep(step => step - 1);
   };
 
-  // Add a function to format location objects as strings
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
     
-    // If location is already a string, return it
     if (typeof location === 'string') return location;
     
-    // If location is an object with lat and lng properties
     if (location && typeof location === 'object') {
-      // Direct object access
       if (location.lat !== undefined && location.lng !== undefined) {
         return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
       }
     }
     
-    // If we can't parse it properly, convert to string
     return String(location);
   };
 
@@ -180,7 +166,6 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     );
   }
 
-  // Handle already resolved items
   if (item.isResolved || matchedItem.isResolved) {
     return (
       <div className="container mt-5">
@@ -259,7 +244,6 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
         </div>
       </div>
       
-      {/* Step 1: Review items */}
       {confirmStep === 1 && (
         <div className="card shadow-sm mb-4">
           <div className="card-body">
@@ -338,7 +322,6 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
         </div>
       )}
       
-      {/* Step 2: Contact Information */}
       {confirmStep === 2 && (
         <div className="card shadow-sm mb-4">
           <div className="card-body">
@@ -435,7 +418,6 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
         </div>
       )}
       
-      {/* Step 3: Final Confirmation */}
       {confirmStep === 3 && (
         <div className="card shadow-sm mb-4">
           <div className="card-body">

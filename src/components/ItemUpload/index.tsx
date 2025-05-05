@@ -263,7 +263,6 @@ const ItemUpload: FC = () => {
       
       const response = await itemService.addItem(submitData);
       
-      // Add debug logging for response structure
       console.log("Item upload response:", {
         fullResponse: response,
         data: response.data,
@@ -271,25 +270,19 @@ const ItemUpload: FC = () => {
         nestedId: response.data?.data?._id
       });
       
-      // Extract the item ID - handle different response structures
       let uploadedId = null;
       let matchResultsData = null;
       
-      // Check different possible response structures
       if (response.data?.data?._id) {
-        // Structure: response.data.data._id
         uploadedId = response.data.data._id;
         matchResultsData = response.data.matchResults;
       } else if (response.data?._id) {
-        // Structure: response.data._id
         uploadedId = response.data._id;
         matchResultsData = response.data.matchResults;
       } else if (response.data?.data?.id) {
-        // Structure: response.data.data.id
         uploadedId = response.data.data.id;
         matchResultsData = response.data.matchResults;
       } else if (typeof response.data === 'object' && response.data !== null) {
-        // Try to find _id or id in the response.data object
         const data = response.data;
         if (data._id) {
           uploadedId = data._id;
@@ -313,10 +306,9 @@ const ItemUpload: FC = () => {
       }
       
       if (matchResultsData && matchResultsData.length > 0) {
-        // Format match results to match our MatchResult interface
         const formattedMatches = matchResultsData.map((match: any) => ({
           matchedItemId: match.item._id || match.item.id || match._id || match.id,
-          similarity: match.score / 100, // Convert score to a decimal between 0-1
+          similarity: match.score / 100, 
           itemName: match.item.name || match.itemName || match.name,
           itemDescription: match.item.description || match.itemDescription || match.description,
           itemImgURL: match.item.imgURL || match.item.imageUrl || match.imgURL || match.imageUrl,
