@@ -17,6 +17,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { itemCategories, ItemCategoryGroup } from "../../data/itemCategories";
 import { useLoadScript } from "@react-google-maps/api";
+import MultiMatchesModal, { MatchResult } from "../MultiMatchesModal";
 
 interface Location {
   lat: number;
@@ -76,7 +77,10 @@ const ItemUpload: FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [matchResults, setMatchResults] = useState<any[] | null>(null);
+  const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
+  const [uploadedItemId, setUploadedItemId] = useState<string | null>(null);
+  const [uploadedItemName, setUploadedItemName] = useState<string | null>(null);
+  const [showMatchesModal, setShowMatchesModal] = useState(false);
   const [otherCategory, setOtherCategory] = useState<string>("");
   const [mapInitialized, setMapInitialized] = useState(false);
 
@@ -244,7 +248,8 @@ const ItemUpload: FC = () => {
     try {
       const submitData = new FormData();
       
-      submitData.append('name', formData.itemType === "other" && otherCategory ? otherCategory : formData.itemType); // Name comes from item type
+      const itemName = formData.itemType === "other" && otherCategory ? otherCategory : formData.itemType;
+      submitData.append('name', itemName);
       submitData.append('description', formData.description);
       submitData.append('category', formData.categoryGroup);
       submitData.append('location', formData.location ? JSON.stringify(formData.location) : '');
@@ -258,8 +263,77 @@ const ItemUpload: FC = () => {
       
       const response = await itemService.addItem(submitData);
       
-      if (response.data.matchResults && response.data.matchResults.length > 0) {
-        setMatchResults(response.data.matchResults);
+      // Add debug logging for response structure
+      console.log("Item upload response:", {
+        fullResponse: response,
+        data: response.data,
+        nestedData: response.data?.data,
+        nestedId: response.data?.data?._id
+      });
+      
+      // Extract the item ID - handle different response structures
+      let uploadedId = null;
+      let matchResultsData = null;
+      
+      // Check different possible response structures
+      if (response.data?.data?._id) {
+        // Structure: response.data.data._id
+        uploadedId = response.data.data._id;
+        matchResultsData = response.data.matchResults;
+      } else if (response.data?._id) {
+        // Structure: response.data._id
+        uploadedId = response.data._id;
+        matchResultsData = response.data.matchResults;
+      } else if (response.data?.data?.id) {
+        // Structure: response.data.data.id
+        uploadedId = response.data.data.id;
+        matchResultsData = response.data.matchResults;
+      } else if (typeof response.data === 'object' && response.data !== null) {
+        // Try to find _id or id in the response.data object
+        const data = response.data;
+        if (data._id) {
+          uploadedId = data._id;
+          matchResultsData = data.matchResults;
+        } else if (data.id) {
+          uploadedId = data.id;
+          matchResultsData = data.matchResults;
+        } else if (data.data && (data.data._id || data.data.id)) {
+          uploadedId = data.data._id || data.data.id;
+          matchResultsData = data.matchResults || data.data.matchResults;
+        }
+      }
+      
+      if (uploadedId) {
+        setUploadedItemId(uploadedId);
+        setUploadedItemName(itemName);
+        
+        console.log("Successfully extracted item ID:", uploadedId);
+      } else {
+        console.error("Could not find item ID in response:", response);
+      }
+      
+      if (matchResultsData && matchResultsData.length > 0) {
+        // Format match results to match our MatchResult interface
+        const formattedMatches = matchResultsData.map((match: any) => ({
+          matchedItemId: match.item._id || match.item.id || match._id || match.id,
+          similarity: match.score / 100, // Convert score to a decimal between 0-1
+          itemName: match.item.name || match.itemName || match.name,
+          itemDescription: match.item.description || match.itemDescription || match.description,
+          itemImgURL: match.item.imgURL || match.item.imageUrl || match.imgURL || match.imageUrl,
+          ownerName: match.item.ownerName || match.ownerName,
+          ownerEmail: match.item.ownerEmail || match.ownerEmail
+        }));
+        
+        setMatchResults(formattedMatches);
+        setShowMatchesModal(true);
+        
+        // Log modal props before showing
+        console.log("Showing modal with props:", {
+          showMatchesModal: true,
+          uploadedItemId: uploadedId,
+          uploadedItemName,
+          matchResults: formattedMatches
+        });
       } else {
         navigate(formData.kind === 'lost' ? '/lost-items' : '/found-items');
       }
@@ -277,6 +351,11 @@ const ItemUpload: FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCloseMatchesModal = () => {
+    setShowMatchesModal(false);
+    navigate(formData.kind === 'lost' ? '/lost-items' : '/found-items');
   };
 
   if (loadError) {
@@ -301,301 +380,258 @@ const ItemUpload: FC = () => {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {matchResults ? (
-        <div className="card shadow-sm mb-4">
-          <div className="card-body">
-            <h2 className="card-title">Match Results</h2>
-            <p className="card-text">
-              We found potential matches for your {formData.kind} item!
-            </p>
-            
-            <div className="row">
-              {matchResults.map((match) => (
-                <div key={match._id} className="col-md-6 col-lg-4 mb-3">
-                  <div className="card h-100">
-                    {match.itemImgURL && (
-                      <img
-                        src={match.itemImgURL}
-                        className="card-img-top"
-                        alt={match.itemName}
-                        style={{ height: "200px", objectFit: "cover" }}
-                      />
-                    )}
-                    <div className="card-body">
-                      <h5 className="card-title">{match.itemName}</h5>
-                      <p className="card-text">{match.itemDescription}</p>
-                      <p className="card-text">
-                        <small className="text-muted">
-                          Similarity: {(match.similarity * 100).toFixed(2)}%
-                        </small>
-                      </p>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => navigate(`/item/${match.matchedItemId}`)}
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
+      <form onSubmit={handleSubmit}>
+        <div className="row">
+          <div className="col-md-6">
+            <div className="card shadow-sm mb-4">
+              <div className="card-body">
+                <h5 className="card-title mb-4">Item Information</h5>
+                
+                <div className="mb-3">
+                  <label htmlFor="itemType" className="form-label">Lost/Found</label>
+                  <select
+                    id="itemType"
+                    name="itemType"
+                    className="form-select"
+                    value={formData.kind}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="lost">Lost Item</option>
+                    <option value="found">Found Item</option>
+                  </select>
                 </div>
-              ))}
-            </div>
-            
-            <div className="mt-4">
-              <button 
-                className="btn btn-outline-secondary me-3"
-                onClick={() => navigate(formData.kind === 'lost' ? '/lost-items' : '/found-items')}
-              >
-                Go to {formData.kind === 'lost' ? 'Lost' : 'Found'} Items
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <div className="row">
-            <div className="col-md-6">
-              <div className="card shadow-sm mb-4">
-                <div className="card-body">
-                  <h5 className="card-title mb-4">Item Information</h5>
-                  
+
+                <div className="mb-3">
+                  <label htmlFor="categoryGroup" className="form-label">
+                    <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
+                    Category Group
+                  </label>
+                  <select
+                    className="form-select"
+                    id="categoryGroup"
+                    value={selectedCategoryGroup?.label || ""}
+                    onChange={handleCategoryGroupChange}
+                    required
+                  >
+                    <option value="">Select a category group</option>
+                    {itemCategories.map((group) => (
+                      <option key={group.label} value={group.label}>
+                        {group.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedCategoryGroup && (
                   <div className="mb-3">
-                    <label htmlFor="itemType" className="form-label">Lost/Found</label>
+                    <label htmlFor="category" className="form-label">Item Type</label>
                     <select
-                      id="itemType"
-                      name="itemType"
                       className="form-select"
-                      value={formData.kind}
+                      id="category"
+                      name="category"
+                      value={formData.itemType}
                       onChange={handleChange}
                       required
                     >
-                      <option value="lost">Lost Item</option>
-                      <option value="found">Found Item</option>
-                    </select>
-                  </div>
-
-                  <div className="mb-3">
-                    <label htmlFor="categoryGroup" className="form-label">
-                      <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
-                      Category Group
-                    </label>
-                    <select
-                      className="form-select"
-                      id="categoryGroup"
-                      value={selectedCategoryGroup?.label || ""}
-                      onChange={handleCategoryGroupChange}
-                      required
-                    >
-                      <option value="">Select a category group</option>
-                      {itemCategories.map((group) => (
-                        <option key={group.label} value={group.label}>
-                          {group.label}
+                      <option value="">Select an item type</option>
+                      {selectedCategoryGroup.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
                         </option>
                       ))}
                     </select>
                   </div>
+                )}
 
-                  {selectedCategoryGroup && (
-                    <div className="mb-3">
-                      <label htmlFor="category" className="form-label">Item Type</label>
-                      <select
-                        className="form-select"
-                        id="category"
-                        name="category"
-                        value={formData.itemType}
-                        onChange={handleChange}
-                        required
-                      >
-                        <option value="">Select an item type</option>
-                        {selectedCategoryGroup.options.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {formData.itemType === "other" && (
-                    <div className="mb-3">
-                      <label htmlFor="otherCategory" className="form-label">
-                        Specify Item Type
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        id="otherCategory"
-                        value={otherCategory}
-                        onChange={handleOtherCategoryChange}
-                        placeholder="Please specify the item type"
-                        required
-                      />
-                    </div>
-                  )}
-                  
+                {formData.itemType === "other" && (
                   <div className="mb-3">
-                    <label htmlFor="description" className="form-label">Description</label>
-                    <textarea
-                      className="form-control"
-                      id="description"
-                      name="description"
-                      rows={4}
-                      value={formData.description}
-                      onChange={handleChange}
-                      placeholder="Describe the item in detail"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="date" className="form-label">
-                      <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
-                      Date
+                    <label htmlFor="otherCategory" className="form-label">
+                      Specify Item Type
                     </label>
                     <input
-                      type="date"
+                      type="text"
                       className="form-control"
-                      id="date"
-                      name="date"
-                      value={formData.date}
-                      onChange={handleChange}
+                      id="otherCategory"
+                      value={otherCategory}
+                      onChange={handleOtherCategoryChange}
+                      placeholder="Please specify the item type"
                       required
                     />
                   </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">
-                      <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                      Location
-                    </label>
-                    <div className="mb-2">
-                      <button
-                        type="button"
-                        className="btn btn-outline-primary"
-                        onClick={handleGetCurrentLocation}
-                      >
-                        <FontAwesomeIcon icon={faLocationCrosshairs} className="me-2" />
-                        Use My Current Location
-                      </button>
-                    </div>
-                    
-                    <div 
-                      ref={mapContainerRef} 
-                      style={mapContainerStyle} 
-                      className="border rounded"
-                    ></div>
-                    
-                    {(!isLoaded || loadError) && (
-                      <div className="mt-3">
-                        <p className="text-muted mb-2">Enter coordinates manually:</p>
-                        <div className="input-group mb-3">
-                          <span className="input-group-text">Latitude</span>
-                          <input 
-                            type="number" 
-                            className="form-control"
-                            value={formData.location.lat}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              location: {
-                                ...prev.location,
-                                lat: parseFloat(e.target.value) || prev.location.lat
-                              }
-                            }))}
-                            step="0.000001"
-                          />
-                        </div>
-                        <div className="input-group">
-                          <span className="input-group-text">Longitude</span>
-                          <input 
-                            type="number" 
-                            className="form-control"
-                            value={formData.location.lng}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              location: {
-                                ...prev.location,
-                                lng: parseFloat(e.target.value) || prev.location.lng
-                              }
-                            }))}
-                            step="0.000001"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
-                    <small className="form-text text-muted mt-2">
-                      {isLoaded && !loadError 
-                        ? "Click on the map to set location or drag the marker"
-                        : "Enter coordinates manually or use current location"
-                      }
-                    </small>
-                  </div>
+                )}
+                
+                <div className="mb-3">
+                  <label htmlFor="description" className="form-label">Description</label>
+                  <textarea
+                    className="form-control"
+                    id="description"
+                    name="description"
+                    rows={4}
+                    value={formData.description}
+                    onChange={handleChange}
+                    placeholder="Describe the item in detail"
+                    required
+                  />
                 </div>
-              </div>
-            </div>
-            
-            <div className="col-md-6">
-              <div className="card shadow-sm mb-4">
-                <div className="card-body">
-                  <h5 className="card-title mb-4">Item Photo</h5>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="image" className="form-label">Upload Image</label>
-                    <input
-                      type="file"
-                      className="form-control"
-                      id="image"
-                      name="image"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      required
-                    />
-                    <small className="form-text text-muted">
-                      An image helps in identifying the item.
-                    </small>
+                
+                <div className="mb-3">
+                  <label htmlFor="date" className="form-label">
+                    <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    id="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">
+                    <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
+                    Location
+                  </label>
+                  <div className="mb-2">
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary"
+                      onClick={handleGetCurrentLocation}
+                    >
+                      <FontAwesomeIcon icon={faLocationCrosshairs} className="me-2" />
+                      Use My Current Location
+                    </button>
                   </div>
                   
-                  {imagePreview ? (
-                    <div className="mb-3 text-center">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="img-thumbnail"
-                        style={{ maxHeight: "300px" }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-center py-5 border rounded mb-3">
-                      <FontAwesomeIcon icon={faCamera} size="3x" className="text-secondary mb-3" />
-                      <p className="text-muted">No image uploaded</p>
+                  <div 
+                    ref={mapContainerRef} 
+                    style={mapContainerStyle} 
+                    className="border rounded"
+                  ></div>
+                  
+                  {(!isLoaded || loadError) && (
+                    <div className="mt-3">
+                      <p className="text-muted mb-2">Enter coordinates manually:</p>
+                      <div className="input-group mb-3">
+                        <span className="input-group-text">Latitude</span>
+                        <input 
+                          type="number" 
+                          className="form-control"
+                          value={formData.location.lat}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            location: {
+                              ...prev.location,
+                              lat: parseFloat(e.target.value) || prev.location.lat
+                            }
+                          }))}
+                          step="0.000001"
+                        />
+                      </div>
+                      <div className="input-group">
+                        <span className="input-group-text">Longitude</span>
+                        <input 
+                          type="number" 
+                          className="form-control"
+                          value={formData.location.lng}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            location: {
+                              ...prev.location,
+                              lng: parseFloat(e.target.value) || prev.location.lng
+                            }
+                          }))}
+                          step="0.000001"
+                        />
+                      </div>
                     </div>
                   )}
+                  
+                  <small className="form-text text-muted mt-2">
+                    {isLoaded && !loadError 
+                      ? "Click on the map to set location or drag the marker"
+                      : "Enter coordinates manually or use current location"
+                    }
+                  </small>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="d-grid gap-2 col-md-6 mx-auto mb-4">
-            <button
-              type="submit"
-              className="btn btn-primary btn-lg"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                  Uploading...
-                </span>
-              ) : (
-                <span>
-                  <FontAwesomeIcon icon={faUpload} className="me-2" />
-                  Upload {formData.kind === 'lost' ? 'Lost' : 'Found'} Item
-                </span>
-              )}
-            </button>
+          <div className="col-md-6">
+            <div className="card shadow-sm mb-4">
+              <div className="card-body">
+                <h5 className="card-title mb-4">Item Photo</h5>
+                
+                <div className="mb-3">
+                  <label htmlFor="image" className="form-label">Upload Image</label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    id="image"
+                    name="image"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    required
+                  />
+                  <small className="form-text text-muted">
+                    An image helps in identifying the item.
+                  </small>
+                </div>
+                
+                {imagePreview ? (
+                  <div className="mb-3 text-center">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="img-thumbnail"
+                      style={{ maxHeight: "300px" }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-5 border rounded mb-3">
+                    <FontAwesomeIcon icon={faCamera} size="3x" className="text-secondary mb-3" />
+                    <p className="text-muted">No image uploaded</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </form>
-      )}
+        </div>
+        
+        <div className="d-grid gap-2 col-md-6 mx-auto mb-4">
+          <button
+            type="submit"
+            className="btn btn-primary btn-lg"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <span>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Uploading...
+              </span>
+            ) : (
+              <span>
+                <FontAwesomeIcon icon={faUpload} className="me-2" />
+                Upload {formData.kind === 'lost' ? 'Lost' : 'Found'} Item
+              </span>
+            )}
+          </button>
+        </div>
+      </form>
+
+      <MultiMatchesModal
+        isOpen={showMatchesModal}
+        onClose={handleCloseMatchesModal}
+        itemId={uploadedItemId || undefined}
+        itemName={uploadedItemName || undefined}
+        itemImage={imagePreview || undefined}
+        matches={matchResults || []}
+      />
     </div>
   );
 };
