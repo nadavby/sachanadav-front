@@ -3,8 +3,10 @@
 import { FC, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faUserCircle,
   faSearch,
   faUpload,
   faLightbulb
@@ -16,7 +18,7 @@ const Navigation: FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+  const navigate = useNavigate();
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -41,16 +43,27 @@ const Navigation: FC = () => {
               <NotificationBell />
             </div>
             
-            <button
-              className="navbar-toggler order-2"
-              type="button"
-              onClick={toggleMenu}
-              aria-controls="navbarNav"
-              aria-expanded={isMenuOpen}
-              aria-label="Toggle navigation"
-            >
-              <span className="navbar-toggler-icon"></span>
-            </button>
+            <div className="d-flex align-items-center order-2">
+              <button 
+                className="btn btn-profile me-3" 
+                onClick={() => navigate("/profile")}
+                title="My Profile"
+                aria-label="Go to user profile"
+              >
+                <FontAwesomeIcon icon={faUserCircle} size="lg" />
+              </button>
+              
+              <button
+                className="navbar-toggler"
+                type="button"
+                onClick={toggleMenu}
+                aria-controls="navbarNav"
+                aria-expanded={isMenuOpen}
+                aria-label="Toggle navigation"
+              >
+                <span className="navbar-toggler-icon"></span>
+              </button>
+            </div>
             
             <div className={`navbar-collapse-container ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
               <ul className="navbar-nav">
@@ -62,16 +75,6 @@ const Navigation: FC = () => {
                   >
                     <FontAwesomeIcon icon={faSearch} className="me-1" />
                     Lost Items
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    to="/found-items"
-                    className={`nav-link ${location.pathname === '/found-items' ? 'active' : ''}`}
-                    onClick={closeMenu}
-                  >
-                    <FontAwesomeIcon icon={faSearch} className="me-1" />
-                    Found Items
                   </Link>
                 </li>
                 <li className="nav-item">

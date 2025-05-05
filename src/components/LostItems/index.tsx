@@ -8,9 +8,6 @@ import { Item } from "../../services/item-service";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faUser,
-  faSignInAlt,
-  faUpload,
   faSearch,
   faMapMarkerAlt,
   faCalendarAlt,
@@ -176,34 +173,6 @@ const LostItems: FC = () => {
 
   return (
     <div className="container mt-3">
-      <div className="d-flex justify-content-between mb-3">
-        {!authLoading &&
-          (isAuthenticated ? (
-            <button className="btn btn-outline-primary d-flex flex-column align-items-center justify-content-center text-center p-3" style={{ width: "100px", height: "100px" }} onClick={() => navigate("/profile")}>
-              <FontAwesomeIcon icon={faUser} size="2x" />
-              <span className="mt-2">My Profile</span>
-            </button>
-          ) : (
-            <button className="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center text-center p-3" style={{ width: "100px", height: "100px" }} onClick={() => navigate("/login")}>
-              <FontAwesomeIcon icon={faSignInAlt} size="2x" />
-              <span className="mt-2">Login</span>
-            </button>
-          ))}
-        <div className="text-center">
-          <h1 className="text-primary text-center flex-grow-1 mb-3">
-            Eureka
-          </h1>
-          <p className="lead text-muted">
-            Browse lost items or upload your own
-          </p>
-        </div>
-        <button className="btn btn-success d-flex flex-column align-items-center justify-content-center text-center p-3" style={{ width: "100px", height: "100px" }} onClick={() => navigate("/upload-item")}>
-          <FontAwesomeIcon icon={faUpload} size="2x" />
-          <span className="mt-2">Upload Item</span>
-        </button>
-      </div>
-      <hr className="border border-primary border-2 opacity-75 my-4" />
-      
       <div className="row mb-4">
         <div className="col-md-6">
           <div className="input-group">
