@@ -7,12 +7,6 @@ import { jwtDecode } from "jwt-decode";
 
 export { CanceledError };
 
-export interface iComment {
-  _id?: string;
-  content: string;
-  postId: string;
-  owner: string;
-}
 export interface IUser {
   _id?: string;
   email: string;

@@ -48,7 +48,6 @@ const MatchDetailModal: FC<MatchDetailModalProps> = ({
       setError(null);
       
       try {
-        // If we already have basic info, use it
         if (itemName && matchName) {
           setItem({
             _id: itemId,
@@ -64,7 +63,6 @@ const MatchDetailModal: FC<MatchDetailModalProps> = ({
             ownerEmail
           } as Item);
         } else {
-          // Otherwise fetch the full items
           const [itemResponse, matchResponse] = await Promise.all([
             itemService.getItemById(itemId).request,
             itemService.getItemById(matchId).request
