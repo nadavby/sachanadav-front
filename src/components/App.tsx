@@ -6,7 +6,6 @@ import { RegistrationForm } from "./RegristrationForm";
 import UserProfile from "./UserProfile";
 import { useAuth } from "../hooks/useAuth";
 import LostItems from "./LostItems";
-import FoundItems from "./FoundItems";
 import ItemUpload from "./ItemUpload";
 import ItemDetail from "./ItemDetail";
 import Navigation from "./Navigation";
@@ -38,10 +37,6 @@ function App() {
           <Route
             path="/lost-items"
             element={<LostItems />}
-          />
-          <Route
-            path="/found-items"
-            element={<FoundItems />}
           />
           <Route
             path="/profile"
