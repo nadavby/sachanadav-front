@@ -12,11 +12,12 @@ import Navigation from "./Navigation";
 import { NotificationsProvider } from "../hooks/useNotifications";
 import NotificationProvider from "./NotificationProvider";
 import MatchConfirmation from "./MatchConfirmation";
+  
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
-
   if (loading) return <p>Loading...</p>;
+  
   return (
     <NotificationsProvider>
       <NotificationProvider>
@@ -51,7 +52,7 @@ function App() {
             element={<ItemDetail />}
           />
           <Route
-            path="/item/:itemId/match/:matchId"
+            path="/match-confirmation/:matchId"
             element={<MatchConfirmation />}
           />
         </Routes>

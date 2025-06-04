@@ -10,6 +10,7 @@ import itemService from "../../services/item-service";
 import defaultAvatar from "../../assets/avatar.png";
 import { Navigate, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { isValidPhoneNumber, formatPhoneNumber } from 'react-phone-number-input';
 import { 
   faArrowLeft, 
   faImage, 
@@ -20,12 +21,15 @@ import {
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useNotifications } from "../../hooks/useNotifications";
 
 const profileFormSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   userName: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  phoneNumber: z.string().refine((val) => {
+    // Check if the phone number is valid using the library's validation
+    return isValidPhoneNumber(val) || val === '';
+  }, "Please enter a valid phone number"),
   profileImage: z.optional(z.instanceof(FileList))
 });
 
@@ -36,6 +40,7 @@ interface UserData {
   email: string;
   userName: string;
   password?: string;
+  phoneNumber?: string;
   imgURL?: string;
   accessToken?: string;
   refreshToken?: string;
@@ -43,7 +48,6 @@ interface UserData {
 
 const UserProfile: FC = () => {
   const { currentUser, updateAuthState, isAuthenticated, loading } = useAuth();
-  const { fetchMatchNotifications } = useNotifications();
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [localUser, setLocalUser] = useState<UserData | null>(null);
@@ -52,9 +56,31 @@ const UserProfile: FC = () => {
   const navigate = useNavigate();
   
   // Get user items
-  const { items, isLoading: itemsLoading, error: itemsError } = 
+  const { items: Items, isLoading: itemsLoading, error: itemsError } = 
     useUserItems(currentUser?._id || "");
-  
+
+  // Transform items to match the expected structure
+  const items = (Items as Item[]).map((item:Item) => ({
+    _id: item._id,
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    location: item.location ,
+    date: item.date,
+    itemType: (item.itemType) as 'lost' | 'found',
+    imageUrl: item.imageUrl, 
+    userId: item.userId,
+    ownerName: item.ownerName,
+    ownerEmail: item.ownerEmail,
+    isResolved: item.isResolved ,
+   matchId: item.matchedId,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  }));
+
+  const lostItems = items.filter(item => (item.itemType).toLowerCase() === 'lost');
+  const foundItems = items.filter(item => (item.itemType ).toLowerCase() === 'found');
+
   const {
     register,
     handleSubmit,
@@ -66,7 +92,8 @@ const UserProfile: FC = () => {
     defaultValues: {
       email: "",
       userName: "",
-      password: ""
+      password: "",
+      phoneNumber: ""
     }
   });
 
@@ -78,6 +105,7 @@ const UserProfile: FC = () => {
       setValue("email", currentUser.email);
       setValue("userName", currentUser.userName || "");
       setValue("password", ""); 
+      setValue("phoneNumber", currentUser.phoneNumber || "");
     }
   }, [currentUser, setValue]);
 
@@ -93,12 +121,6 @@ const UserProfile: FC = () => {
     }
   }, [watchProfileImage, tempImageURL]);
 
-  useEffect(() => {
-    if (items && items.length > 0) {
-      fetchMatchNotifications(items);
-    }
-  }, [items, fetchMatchNotifications]);
-
   const onSubmit = async (data: ProfileFormData) => {
     if (!localUser || !localUser._id) return;
     
@@ -107,11 +129,16 @@ const UserProfile: FC = () => {
     try {
       const updatedUserData: Partial<UserData> = {
         email: data.email,
-        userName: data.userName
+        userName: data.userName,
+        phoneNumber: data.phoneNumber
       };
       
       if (data.password && data.password.length >= 8) {
         updatedUserData.password = data.password;
+      }
+
+      if (data.phoneNumber && isValidPhoneNumber(data.phoneNumber)) {
+        updatedUserData.phoneNumber = data.phoneNumber;
       }
       
       if (selectedImage) {
@@ -145,6 +172,7 @@ const UserProfile: FC = () => {
       setValue("email", localUser.email);
       setValue("userName", localUser.userName || "");
       setValue("password", "");
+      setValue("phoneNumber", localUser.phoneNumber || "");
     }
     setSelectedImage(null);
     setTempImageUrl(null);
@@ -216,9 +244,6 @@ const UserProfile: FC = () => {
 
   const { ref: profileImageRef, ...profileImageRest } = register("profileImage");
 
-  const lostItems = items.filter(item => item.itemType === 'lost');
-  const foundItems = items.filter(item => item.itemType === 'found');
-
   return (
     <div className="container mt-4">
       <button
@@ -276,6 +301,9 @@ const UserProfile: FC = () => {
                   </p>
                   <p>
                     <strong>Password:</strong> ********
+                  </p>
+                  <p>
+                    <strong>Phone Number:</strong> {localUser.phoneNumber ? formatPhoneNumber(localUser.phoneNumber) : "Not set"}
                   </p>
                   <button
                     type="button"
@@ -338,6 +366,19 @@ const UserProfile: FC = () => {
                     )}
                   </div>
                   
+                  <div className="mb-3">
+                    <label htmlFor="phoneNumber" className="form-label">Phone Number:</label>
+                    <input
+                      id="phoneNumber"
+                      {...register("phoneNumber")}
+                      type="tel"
+                      className={`form-control ${errors.phoneNumber ? "is-invalid" : ""}`}
+                    />
+                    {errors.phoneNumber && (
+                      <div className="invalid-feedback">{errors.phoneNumber.message}</div>
+                    )}
+                  </div>
+
                   <button
                     type="submit"
                     className="btn btn-success me-2"
@@ -370,17 +411,16 @@ const UserProfile: FC = () => {
             {lostItems.map((item: Item) => (
               <div key={item._id} className="col-md-6 col-lg-4 mb-4">
                 <div className="card shadow-sm h-100">
-                  {item.imgURL && (
+                  {item.imageUrl && (
                     <img 
-                      src={item.imgURL} 
+                      src={item.imageUrl} 
                       className="card-img-top" 
                       alt={item.name}
                       style={{ height: "200px", objectFit: "cover" }}
                     />
                   )}
                   <div className="card-body d-flex flex-column">
-                    <h5 className="card-title">{item.name}</h5>
-                    <p className="card-text">{item.description}</p>
+                    <h5 className="card-text">{item.description}</h5>
                     <div className="mt-auto">
                       <p className="card-text mb-1">
                         <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
@@ -430,17 +470,16 @@ const UserProfile: FC = () => {
             {foundItems.map((item: Item) => (
               <div key={item._id} className="col-md-6 col-lg-4 mb-4">
                 <div className="card shadow-sm h-100">
-                  {item.imgURL && (
+                  {item.imageUrl && (
                     <img 
-                      src={item.imgURL} 
+                      src={item.imageUrl} 
                       className="card-img-top" 
                       alt={item.name}
                       style={{ height: "200px", objectFit: "cover" }}
                     />
                   )}
                   <div className="card-body d-flex flex-column">
-                    <h5 className="card-title">{item.name}</h5>
-                    <p className="card-text">{item.description}</p>
+                    <h5 className="card-text">{item.description}</h5>
                     <div className="mt-auto">
                       <p className="card-text mb-1">
                         <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />

@@ -2,94 +2,152 @@ import { FC, useEffect, useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faUser, faCheckCircle, faPercentage } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faUser, faCheckCircle, faPercentage, faMapMarkerAlt, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 import './styles.css';
 import itemService, { Item } from '../../services/item-service';
+import matchService, { IMatch } from '../../services/match-service';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 interface MatchDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  itemId?: string;
-  matchId?: string;
-  itemName?: string;
-  matchName?: string;
-  itemImage?: string;
-  matchImage?: string;
-  score?: number;
-  ownerName?: string;
-  ownerEmail?: string;
-  onViewDetails: () => void;
+  matchId: string;
 }
 
 const MatchDetailModal: FC<MatchDetailModalProps> = ({
   isOpen,
   onClose,
-  itemId,
-  matchId,
-  itemName,
-  matchName,
-  itemImage,
-  matchImage,
-  score,
-  ownerName,
-  ownerEmail,
-  onViewDetails
+  matchId
 }) => {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [item, setItem] = useState<Item | null>(null);
-  const [matchedItem, setMatchedItem] = useState<Item | null>(null);
+  const [match, setMatch] = useState<IMatch | null>(null);
+  const [userItem, setUserItem] = useState<Item | null>(null);
+  const [otherItem, setOtherItem] = useState<Item | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchItems = async () => {
-      if (!itemId || !matchId) return;
+    const fetchData = async () => {
+      if (!matchId) {
+        console.log('No matchId provided');
+        return;
+      }
       
+      console.log('Fetching match details for matchId:', matchId);
       setLoading(true);
       setError(null);
       
       try {
-        if (itemName && matchName) {
-          setItem({
-            _id: itemId,
-            name: itemName,
-            imgURL: itemImage,
-          } as Item);
-          
-          setMatchedItem({
-            _id: matchId,
-            name: matchName,
-            imgURL: matchImage,
-            ownerName,
-            ownerEmail
-          } as Item);
+        // First fetch the match
+        const matchResponse = await matchService.getById(matchId).request;
+        const matchData = matchResponse.data;
+        setMatch(matchData);
+        
+        // Then fetch both items
+        const [item1Response, item2Response] = await Promise.all([
+          itemService.getItemById(matchData.item1Id).request,
+          itemService.getItemById(matchData.item2Id).request
+        ]);
+        
+        const item1 = item1Response.data;
+        const item2 = item2Response.data;
+
+        // Determine which item belongs to the current user
+        if (item1.userId === currentUser?._id) {
+          setUserItem(item1);
+          setOtherItem(item2);
         } else {
-          const [itemResponse, matchResponse] = await Promise.all([
-            itemService.getItemById(itemId).request,
-            itemService.getItemById(matchId).request
-          ]);
-          
-          setItem(itemResponse.data);
-          setMatchedItem(matchResponse.data);
+          setUserItem(item2);
+          setOtherItem(item1);
         }
-      } catch (error) {
-        console.error('Error fetching items:', error);
-        setError('Failed to load items. Please try again.');
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        setError(
+          error.response?.data || 
+          'Failed to load match details. Please try again.'
+        );
       } finally {
         setLoading(false);
       }
     };
     
     if (isOpen) {
-      fetchItems();
+      fetchData();
+    } else {
+      // Clear state when modal closes
+      setMatch(null);
+      setUserItem(null);
+      setOtherItem(null);
+      setError(null);
     }
-  }, [isOpen, itemId, matchId, itemName, matchName, itemImage, matchImage, ownerName, ownerEmail]);
+  }, [isOpen, matchId, currentUser?._id]);
 
   if (!isOpen) return null;
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatLocation = (location: { lat: number; lng: number } | string) => {
+    if (typeof location === 'string') return location;
+    
+    return `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+  };
+
+  const renderItem = (item: Item | null, isUserItem: boolean) => {
+    if (!item) return null;
+    
+    return (
+      <div className="match-detail-item">
+        <div className="match-detail-item-image">
+          {item.imageUrl && (
+            <img 
+              src={item.imageUrl} 
+              alt={item.name} 
+            />
+          )}
+        </div>
+        <div className="match-detail-item-info">
+          <h5>{item.name}</h5>
+          <p className="item-description">{item.description}</p>
+          <div className="item-details">
+            <div className="detail-row">
+              <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2" />
+              {formatLocation(item.location)}
+            </div>
+            <div className="detail-row">
+              <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+              {formatDate(item.date)}
+            </div>
+          </div>
+          {!isUserItem && item.ownerName && (
+            <div className="owner-detail mt-2">
+              <FontAwesomeIcon icon={faUser} className="me-2" />
+              {item.ownerName}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const handleViewFullDetails = () => {
+    if (match && userItem && otherItem) {
+      navigate(`/match-confirmation/${matchId}`);
+      onClose();
+    }
+  };
 
   return (
     <Modal show={isOpen} onHide={onClose} centered className="match-detail-modal">
       <Modal.Header closeButton>
-        <Modal.Title>Potential Match Found</Modal.Title>
+        <Modal.Title>Match Details</Modal.Title>
       </Modal.Header>
       
       <Modal.Body>
@@ -101,32 +159,21 @@ const MatchDetailModal: FC<MatchDetailModalProps> = ({
             <p className="mt-2">Loading match details...</p>
           </div>
         ) : error ? (
-          <div className="alert alert-danger">{error}</div>
-        ) : (
+          <div className="alert alert-danger">
+            <p className="mb-0">{error}</p>
+            <small className="d-block mt-1">Match ID: {matchId}</small>
+          </div>
+        ) : match && userItem && otherItem ? (
           <>
-            <div className="match-detail-score">
-              <FontAwesomeIcon icon={faPercentage} className="me-2" />
-              Match Score: <span>{score}%</span>
-            </div>
+            {match.matchScore && (
+              <div className="match-score">
+                <FontAwesomeIcon icon={faPercentage} className="me-2" />
+                Match Score: <span>{Math.round(match.matchScore)}%</span>
+              </div>
+            )}
             
             <div className="match-detail-items">
-              <div className="match-detail-item">
-                <div className="match-detail-item-image">
-                  {itemImage && (
-                    <img 
-                      src={itemImage} 
-                      alt={itemName} 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=No+Image';
-                      }}
-                    />
-                  )}
-                </div>
-                <div className="match-detail-item-info">
-                  <h5>{itemName || (item?.name || 'Your Item')}</h5>
-                  <p className="item-type">Your {item?.itemType || 'Item'}</p>
-                </div>
-              </div>
+              {renderItem(userItem, true)}
               
               <div className="match-divider">
                 <div className="match-line"></div>
@@ -136,43 +183,11 @@ const MatchDetailModal: FC<MatchDetailModalProps> = ({
                 <div className="match-line"></div>
               </div>
               
-              <div className="match-detail-item">
-                <div className="match-detail-item-image">
-                  {matchImage && (
-                    <img 
-                      src={matchImage} 
-                      alt={matchName} 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=No+Image';
-                      }}
-                    />
-                  )}
-                </div>
-                <div className="match-detail-item-info">
-                  <h5>{matchName || (matchedItem?.name || 'Matched Item')}</h5>
-                  <p className="item-type">{matchedItem?.itemType || 'Found'} by another user</p>
-                </div>
-              </div>
+              {renderItem(otherItem, false)}
             </div>
-            
-            {(ownerName || ownerEmail || (matchedItem?.ownerName) || (matchedItem?.ownerEmail)) && (
-              <div className="match-owner-info">
-                <h6>Owner Information</h6>
-                {(ownerName || matchedItem?.ownerName) && (
-                  <div className="owner-detail">
-                    <FontAwesomeIcon icon={faUser} className="me-2" />
-                    {ownerName || matchedItem?.ownerName}
-                  </div>
-                )}
-                {(ownerEmail || matchedItem?.ownerEmail) && (
-                  <div className="owner-detail">
-                    <FontAwesomeIcon icon={faEnvelope} className="me-2" />
-                    {ownerEmail || matchedItem?.ownerEmail}
-                  </div>
-                )}
-              </div>
-            )}
           </>
+        ) : (
+          <div className="alert alert-warning">No match details available.</div>
         )}
       </Modal.Body>
       
@@ -180,7 +195,11 @@ const MatchDetailModal: FC<MatchDetailModalProps> = ({
         <Button variant="secondary" onClick={onClose}>
           Close
         </Button>
-        <Button variant="primary" onClick={onViewDetails}>
+        <Button 
+          variant="primary" 
+          onClick={handleViewFullDetails}
+          disabled={!match || !userItem || !otherItem}
+        >
           View Full Details
         </Button>
       </Modal.Footer>

@@ -8,28 +8,28 @@ import {
   faExclamationTriangle,
   faEnvelope,
   faPhone,
+  faInfoCircle,
   faComment
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../hooks/useAuth';
-import itemService, { Item, MatchResult } from '../../services/item-service';
+import itemService, { Item } from '../../services/item-service';
+import matchService, { IMatch } from '../../services/match-service';
 import './MatchConfirmation.css';
 
 interface MatchConfirmationProps {
-  itemId?: string;
   matchId?: string;
 }
 
 const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
-  const { itemId: urlItemId, matchId: urlMatchId } = useParams<{ itemId: string, matchId: string }>();
+  const { matchId: urlMatchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   
-  const itemId = props.itemId || urlItemId;
   const matchId = props.matchId || urlMatchId;
   
-  const [item, setItem] = useState<Item | null>(null);
-  const [matchedItem, setMatchedItem] = useState<Item | null>(null);
-  const [matchInfo, setMatchInfo] = useState<MatchResult | null>(null);
+  const [match, setMatch] = useState<IMatch | null>(null);
+  const [userItem, setUserItem] = useState<Item | null>(null);
+  const [otherItem, setOtherItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState(1);
@@ -40,66 +40,47 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
   const [confirmationSuccess, setConfirmationSuccess] = useState(false);
 
   useEffect(() => {
-    if (!itemId || !matchId) {
-      setError('Missing required information');
+    if (!matchId) {
+      setError('Missing match ID');
       setLoading(false);
       return;
     }
 
-    fetchItems();
-  }, [itemId, matchId]);
+    fetchMatchAndItems();
+  }, [matchId]);
 
-  const fetchItems = async () => {
+  const fetchMatchAndItems = async () => {
     try {
       setLoading(true);
       
-      const { request: itemRequest } = itemService.getItemById(itemId!);
-      const itemResponse = await itemRequest;
-      setItem(itemResponse.data);
-      const { request: matchRequest } = itemService.getItemById(matchId!);
-      const matchResponse = await matchRequest;
-      setMatchedItem(matchResponse.data);
+      // First fetch the match
+      const matchResponse = await matchService.getById(matchId).request;
+      const matchData = matchResponse.data;
+      setMatch(matchData);
+      
+      // Then fetch both items in parallel
+      const [item1Response, item2Response] = await Promise.all([
+        itemService.getItemById(matchData.item1Id).request,
+        itemService.getItemById(matchData.item2Id).request
+      ]);
+      
+      const item1 = item1Response.data;
+      const item2 = item2Response.data;
 
-      if (itemResponse.data.matchResults) {
-        const match = itemResponse.data.matchResults.find(
-          (m: MatchResult) => m.matchedItemId === matchId
-        );
-        if (match) {
-          setMatchInfo(match);
-        }
+      // Determine which item belongs to the current user by checking owner
+      if (item1.userId === currentUser?._id) {
+        setUserItem(item1);
+        setOtherItem(item2);
+      } else {
+        setUserItem(item2);
+        setOtherItem(item1);
       }
       
     } catch (error) {
-      console.error('Error fetching items:', error);
-      setError('Failed to load item details');
+      console.error('Error fetching data:', error);
+      setError('Failed to load match details');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleConfirmMatch = async () => {
-    if (!item || !matchedItem || !currentUser) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      await itemService.updateItem(item._id!, {
-        isResolved: true,
-        resolvedWithItemId: matchedItem._id
-      });
-      
-      await itemService.updateItem(matchedItem._id!, {
-        isResolved: true,
-        resolvedWithItemId: item._id
-      });
-      
-      setConfirmationSuccess(true);
-      
-    } catch (error) {
-      console.error('Error confirming match:', error);
-      setError('Failed to confirm match');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -151,7 +132,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     );
   }
 
-  if (!item || !matchedItem) {
+  if (!userItem || !otherItem) {
     return (
       <div className="container mt-5">
         <div className="alert alert-warning">Items not found.</div>
@@ -166,7 +147,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     );
   }
 
-  if (item.isResolved || matchedItem.isResolved) {
+  if (userItem.isResolved || otherItem.isResolved) {
     return (
       <div className="container mt-5">
         <div className="alert alert-info">
@@ -176,7 +157,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
         <div className="d-flex gap-3">
           <button
             className="btn btn-outline-primary"
-            onClick={() => navigate(`/item/${item._id}`)}
+            onClick={() => navigate(`/item/${userItem._id}`)}
           >
             View Your Item
           </button>
@@ -258,22 +239,22 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
               <div className="col-md-6 mb-4 mb-md-0">
                 <div className="card h-100">
                   <div className="card-header bg-primary text-white">
-                    Your {item.itemType === 'lost' ? 'Lost' : 'Found'} Item
+                    Your Item
                   </div>
-                  {item.imgURL && (
-                    <img 
-                      src={item.imgURL} 
-                      alt={item.name}
-                      className="card-img-top match-item-image"
-                    />
-                  )}
                   <div className="card-body">
-                    <h5 className="card-title">{item.name}</h5>
-                    <p className="card-text">{item.description}</p>
+                    <div className="image-container text-center">
+                      <img 
+                        src={userItem?.imageUrl} 
+                        alt={userItem?.name}
+                        className="img-fluid rounded mb-3"
+                        style={{ maxHeight: '300px', objectFit: 'contain' }}
+                      />
+                    </div>
+                    <h5 className="card-text">{userItem?.description}</h5>
                     <ul className="list-group list-group-flush mb-3">
-                      <li className="list-group-item"><strong>Category:</strong> {item.category}</li>
-                      <li className="list-group-item"><strong>Location:</strong> {formatLocation(item.location)}</li>
-                      <li className="list-group-item"><strong>Date:</strong> {new Date(item.date).toLocaleDateString()}</li>
+                      <li className="list-group-item"><strong>Category:</strong> {userItem?.category}</li>
+                      <li className="list-group-item"><strong>Location:</strong> {formatLocation(userItem?.location)}</li>
+                      <li className="list-group-item"><strong>Date:</strong> {userItem?.date ? new Date(userItem.date).toLocaleDateString() : ''}</li>
                     </ul>
                   </div>
                 </div>
@@ -282,29 +263,21 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
               <div className="col-md-6">
                 <div className="card h-100">
                   <div className="card-header bg-success text-white">
-                    Matched {matchedItem.itemType === 'lost' ? 'Lost' : 'Found'} Item
+                    Matched Item
                   </div>
-                  {matchedItem.imgURL && (
-                    <img 
-                      src={matchedItem.imgURL} 
-                      alt={matchedItem.name}
-                      className="card-img-top match-item-image"
-                    />
-                  )}
                   <div className="card-body">
-                    <h5 className="card-title">{matchedItem.name}</h5>
-                    <p className="card-text">{matchedItem.description}</p>
+                      <img 
+                        src={otherItem?.imageUrl} 
+                        alt={otherItem?.name}
+                        className="img-fluid rounded mb-3"
+                        style={{ maxHeight: '300px', objectFit: 'contain' }}
+                      />
+                    <h5 className="card-text">{otherItem?.description}</h5>
                     <ul className="list-group list-group-flush mb-3">
-                      <li className="list-group-item"><strong>Category:</strong> {matchedItem.category}</li>
-                      <li className="list-group-item"><strong>Location:</strong> {formatLocation(matchedItem.location)}</li>
-                      <li className="list-group-item"><strong>Date:</strong> {new Date(matchedItem.date).toLocaleDateString()}</li>
+                      <li className="list-group-item"><strong>Category:</strong> {otherItem?.category}</li>
+                      <li className="list-group-item"><strong>Location:</strong> {formatLocation(otherItem?.location)}</li>
+                      <li className="list-group-item"><strong>Date:</strong> {otherItem?.date ? new Date(otherItem.date).toLocaleDateString() : ''}</li>
                     </ul>
-                    
-                    {matchInfo && (
-                      <div className="match-score-badge mt-3">
-                        <span>Match Score: {(matchInfo.similarity * 100).toFixed()}%</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -432,10 +405,10 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
               <h5>Summary</h5>
               <ul className="list-group mb-3">
                 <li className="list-group-item">
-                  <strong>Your Item:</strong> {item.name}
+                  <strong>Your Item:</strong> {userItem?.name}
                 </li>
                 <li className="list-group-item">
-                  <strong>Matched Item:</strong> {matchedItem.name}
+                  <strong>Matched Item:</strong> {otherItem?.name}
                 </li>
                 <li className="list-group-item">
                   <strong>Contact Method:</strong> {contactMethod}
@@ -457,23 +430,6 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
                 onClick={handlePrevStep}
               >
                 Back
-              </button>
-              <button 
-                className="btn btn-success"
-                onClick={handleConfirmMatch}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon={faCheckCircle} className="me-2" />
-                    Confirm Match
-                  </>
-                )}
               </button>
             </div>
           </div>

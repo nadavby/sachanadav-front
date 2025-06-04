@@ -13,6 +13,7 @@ export interface IUser {
   userName: string;
   password?: string;
   imgURL?: string;
+  phoneNumber?: string;
   accessToken?: string;
   refreshToken?: string;
 }

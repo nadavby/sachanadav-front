@@ -10,38 +10,34 @@ import {
   faTag,
   faMapMarkerAlt,
   faCalendarAlt,
-  faInfoCircle,
-  faExchangeAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../hooks/useAuth';
 import itemService, { Item } from '../../services/item-service';
-import imageComparisonService from '../../services/imageComparisonService';
+import { useMatch } from '../../hooks/useMatch';
+import { IMatch } from '../../services/match-service';
 import './ItemDetail.css';
 
 const ItemDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { matches, isLoading: matchesLoading, error: matchError } = useMatch();
   
   const [item, setItem] = useState<Item | null>(null);
-  const [matches, setMatches] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [matchesLoading, setMatchesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<IMatch | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!itemId) return;
 
     const fetchItem = async () => {
       try {
         setLoading(true);
-        const { request } = itemService.getItemById(id);
+        const { request } = itemService.getItemById(itemId);
         const response = await request;
         setItem(response.data);
-        
-        fetchMatches(id);
       } catch (error) {
         console.error('Error fetching item:', error);
         setError('Failed to load item details');
@@ -51,35 +47,19 @@ const ItemDetail: React.FC = () => {
     };
 
     fetchItem();
-  }, [id]);
-
-  const fetchMatches = async (itemId: string) => {
-    try {
-      setMatchesLoading(true);
-      
-      if (item?.matchResults && item.matchResults.length > 0) {
-        setMatches(item.matchResults);
-      } else {
-        const matchesData = await imageComparisonService.findMatches(itemId);
-        setMatches(matchesData.matches || []);
-      }
-    } catch (error) {
-      console.error('Error fetching matches:', error);
-    } finally {
-      setMatchesLoading(false);
-    }
-  };
+  }, [itemId]);
 
   const handleResolveItem = async (matchId?: string) => {
-    if (!id || !item) return;
+    if (!itemId || !item) return;
     
     try {
-      await itemService.updateItem(id, { 
+      const resolveData = {
         ...item,
         isResolved: true,
-        resolvedWithItemId: matchId 
-      });
-      
+        resolvedWithItemId: matchId
+      };
+
+      await itemService.updateItem(itemId, resolveData);
       setItem({ ...item, isResolved: true });
       setResolveDialogOpen(false);
       
@@ -90,7 +70,7 @@ const ItemDetail: React.FC = () => {
     }
   };
 
-  const openResolveDialog = (match: any = null) => {
+  const openResolveDialog = (match: IMatch | null = null) => {
     setSelectedMatch(match);
     setResolveDialogOpen(true);
   };
@@ -123,21 +103,8 @@ const ItemDetail: React.FC = () => {
     );
   }
 
-  const isOwner = currentUser && currentUser._id === item.owner;
+  const isOwner = currentUser && currentUser._id === item.userId;
 
-  const getProperImageUrl = (url: string): string => {
-    if (!url) return '';
-    
-    console.log("Original image URL:", url);
-    
-    if (url.startsWith('http')) {
-      return url;
-    } else if (url.startsWith('/')) {
-      return `http://localhost:3000${url}`;
-    } else {
-      return `http://localhost:3000/uploads/${url}`;
-    }
-  };
 
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
@@ -182,31 +149,13 @@ const ItemDetail: React.FC = () => {
               
               <div className="row">
                 <div className="col-md-6">
-                  {item.imgURL ? (
                     <img 
-                      src={getProperImageUrl(item.imgURL)} 
+                      src={item.imageUrl} 
                       alt={item.name}
                       className="img-fluid rounded mb-3"
                       style={{ maxHeight: '300px', objectFit: 'contain' }}
-                      onError={(e) => {
-                        console.error("Image failed to load:", item.imgURL);
-                        console.log("Image URL attempted:", getProperImageUrl(item.imgURL));
-                        setTimeout(() => {
-                          if (item.imgURL && !item.imgURL.startsWith('http') && !item.imgURL.startsWith('/')) {
-                            console.log("Trying secondary image URL format...");
-                            (e.target as HTMLImageElement).src = `http://localhost:3000/uploads/${item.imgURL}`;
-                          } else {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300?text=Image+Not+Available';
-                          }
-                        }, 100);
-                      }}
+                      
                     />
-                  ) : (
-                    <div className="text-center py-5 border rounded mb-3 bg-light">
-                      <FontAwesomeIcon icon={faInfoCircle} size="3x" className="text-secondary mb-3" />
-                      <p className="text-muted">No image available</p>
-                    </div>
-                  )}
                 </div>
                 
                 <div className="col-md-6">
@@ -244,91 +193,7 @@ const ItemDetail: React.FC = () => {
             </div>
           </div>
         </div>
-        
-        <div className="col-lg-4">
-          <div className="card shadow-sm mb-4">
-            <div className="card-header bg-white">
-              <h3 className="card-title mb-0">
-                <FontAwesomeIcon icon={faExchangeAlt} className="me-2 text-primary" />
-                Potential Matches
-              </h3>
-            </div>
-            <div className="card-body">
-              {matchesLoading ? (
-                <div className="text-center py-4">
-                  <div className="spinner-border spinner-border-sm text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                  <p className="mt-2 mb-0">Finding matches...</p>
-                </div>
-              ) : matches && matches.length > 0 ? (
-                <div className="match-list">
-                  {matches.map((match) => (
-                    <div key={match.matchedItemId || match._id} className="card mb-3 match-card">
-                      <div className="row g-0">
-                        {match.itemImgURL && (
-                          <div className="col-4">
-                            <img 
-                              src={getProperImageUrl(match.itemImgURL)} 
-                              alt={match.itemName} 
-                              className="img-fluid rounded-start"
-                              style={{ height: '100%', objectFit: 'cover' }}
-                              onError={(e) => {
-                                console.error("Match image failed to load:", match.itemImgURL);
-                                console.log("Match image URL attempted:", getProperImageUrl(match.itemImgURL));
-                                setTimeout(() => {
-                                  if (match.itemImgURL && !match.itemImgURL.startsWith('http') && !match.itemImgURL.startsWith('/')) {
-                                    console.log("Trying secondary match image URL format...");
-                                    (e.target as HTMLImageElement).src = `http://localhost:3000/uploads/${match.itemImgURL}`;
-                                  } else {
-                                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=No+Image';
-                                  }
-                                }, 100);
-                              }}
-                            />
-                          </div>
-                        )}
-                        <div className={match.itemImgURL ? "col-8" : "col-12"}>
-                          <div className="card-body py-2">
-                            <h5 className="card-title mb-1">{match.itemName}</h5>
-                            <p className="card-text small text-muted mb-1">{match.itemDescription}</p>
-                            <div className="d-flex justify-content-between align-items-center">
-                              <span className="badge bg-info">
-                                {(match.similarity * 100).toFixed()}% Match
-                              </span>
-                              <button 
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => navigate(`/item/${match.matchedItemId}`)}
-                              >
-                                View
-                              </button>
-                            </div>
-                            {isOwner && !item.isResolved && (
-                              <button 
-                                className="btn btn-sm btn-success mt-2 w-100"
-                                onClick={() => openResolveDialog(match)}
-                              >
-                                This is my item!
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-muted mb-0">
-                    No potential matches found yet. We'll continue looking!
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
-
       {resolveDialogOpen && (
         <div className="modal fade show" style={{ display: 'block' }} tabIndex={-1}>
           <div className="modal-dialog modal-dialog-centered">
@@ -346,8 +211,7 @@ const ItemDetail: React.FC = () => {
               <div className="modal-body">
                 {selectedMatch ? (
                   <p>
-                    Are you sure this is a match with "{selectedMatch.itemName}"? 
-                    This will mark your item as resolved.
+                    Are you sure this is your item? This will mark your item as resolved.
                   </p>
                 ) : (
                   <p>
@@ -366,7 +230,12 @@ const ItemDetail: React.FC = () => {
                 <button 
                   type="button" 
                   className="btn btn-success"
-                  onClick={() => handleResolveItem(selectedMatch?.matchedItemId)}
+                  onClick={() => {
+                    const matchedId = selectedMatch ? 
+                      (selectedMatch.item1Id === itemId ? selectedMatch.item2Id : selectedMatch.item1Id) 
+                      : undefined;
+                    handleResolveItem(matchedId);
+                  }}
                 >
                   Confirm
                 </button>

@@ -10,7 +10,6 @@ import {
   faUpload,
   faLightbulb
 } from "@fortawesome/free-solid-svg-icons";
-import NotificationBell from "../common/NotificationBell";
 import "./styles.css"; 
 
 const Navigation: FC = () => {
@@ -37,11 +36,7 @@ const Navigation: FC = () => {
         </div>
         
         {!loading && isAuthenticated && (
-          <>
-            <div className="notification-center-container order-1">
-              <NotificationBell />
-            </div>
-            
+          <>    
             <div className="d-flex align-items-center order-2">
               <button 
                 className="btn btn-profile me-3" 

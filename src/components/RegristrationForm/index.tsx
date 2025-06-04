@@ -1,12 +1,16 @@
 import { FC, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImage, faEnvelope, faUser, faLock } from "@fortawesome/free-solid-svg-icons";
+import { faImage, faEnvelope, faUser, faLock, faPhone } from "@fortawesome/free-solid-svg-icons";
 import { useForm } from "react-hook-form";
 import userService, { IUser } from "../../services/user-service";
 import avatar from "../../assets/avatar.png";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { isValidPhoneNumber } from 'react-phone-number-input';
+import './RegistrationForm.css';
 
 export type formData = z.infer<typeof schema>;
 
@@ -15,16 +19,22 @@ const schema = z.object({
   userName: z.string().min(3, "Name must be at least 3 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   img: z.optional(z.instanceof(FileList)),
+  phoneNumber: z.string().refine((val) => {
+    // Check if the phone number is valid using the library's validation
+    return isValidPhoneNumber(val) || val === '';
+  }, "Please enter a valid phone number")
 });
 
 export const RegistrationForm: FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [phoneValue, setPhoneValue] = useState<string>("");
   const navigate = useNavigate();
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<formData>({ resolver: zodResolver(schema) });
   const [watchImg] = watch(["img"]);
@@ -35,6 +45,11 @@ export const RegistrationForm: FC = () => {
       setFile(watchImg[0]);
     }
   }, [watchImg]);
+
+  // Update form value when phone number changes
+  useEffect(() => {
+    setValue('phoneNumber', phoneValue);
+  }, [phoneValue, setValue]);
 
   const onSubmit = async (data: formData) => {
     console.log(data);
@@ -48,6 +63,7 @@ export const RegistrationForm: FC = () => {
         userName: data.userName,
         password: data.password,
         imgURL: res.data.url,
+        phoneNumber: data.phoneNumber,
       };
 
       const registerRes = await userService.register(user);
@@ -172,6 +188,25 @@ export const RegistrationForm: FC = () => {
                   />
                   {errors.password && (
                     <div className="invalid-feedback">{errors.password.message}</div>
+                  )}
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="phoneNumber" className="form-label d-flex align-items-center">
+                    <FontAwesomeIcon icon={faPhone} className="me-2" />
+                    Phone Number
+                  </label>
+                  <div className={errors.phoneNumber ? "is-invalid" : ""}>
+                    <PhoneInput
+                      international
+                      defaultCountry="IL"
+                      value={phoneValue}
+                      onChange={setPhoneValue}
+                      id="phoneNumber"
+                    />
+                  </div>
+                  {errors.phoneNumber && (
+                    <div className="invalid-feedback">{errors.phoneNumber.message}</div>
                   )}
                 </div>
 

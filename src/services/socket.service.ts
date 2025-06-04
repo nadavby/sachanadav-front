@@ -1,128 +1,56 @@
+// services/socket.service.ts
 import { io, Socket } from 'socket.io-client';
-
-export interface MatchNotification {
-  type: 'MATCH_FOUND';
-  title: string;
-  message: string;
-  data: {
-    matchedItemId: string;
-    score: number;
-    matchedItem: {
-      description: string;
-      imageUrl: string;
-      itemType: string;
-      ownerName: string;
-      ownerEmail: string;
-    }
-  }
-}
-
-export type NotificationCallback = (notification: MatchNotification) => void;
-
-const getApiUrl = () => {
-  const currentUrl = window.location.origin;
-  if (currentUrl.includes('localhost')) {
-    return 'http://localhost:3000';
-  }
-  return window.location.origin;
-};
+import { INotification } from './notification-service';
 
 class SocketService {
   private socket: Socket | null = null;
-  private notificationCallbacks: NotificationCallback[] = [];
-  private reconnectAttempts = 0;
-  private readonly maxReconnectAttempts = 5;
-  private readonly reconnectDelay = 3000; 
+  private static instance: SocketService;
 
-  getSocket(): Socket {
-    if (!this.socket) {
-      this.connect();
+  private constructor() {}
+
+  static getInstance(): SocketService {
+    if (!SocketService.instance) {
+      SocketService.instance = new SocketService();
     }
-    return this.socket!;
+    return SocketService.instance;
   }
 
-  connect() {
+  connect(userId: string) {
     if (this.socket?.connected) {
+      console.log('[SOCKET] Already connected');
       return;
     }
 
-    try {
-      this.socket = io(getApiUrl(), {
-        reconnection: true,
-        reconnectionDelay: this.reconnectDelay,
-        reconnectionAttempts: this.maxReconnectAttempts,
-        withCredentials: true, 
-        transports: ['websocket', 'polling'],
-      });
-
-      this.setupEventListeners();
-    } catch (error) {
-      console.error('Error initializing socket:', error);
-    }
-  }
-
-  private setupEventListeners() {
-    if (!this.socket) return;
+    this.socket = io('http://localhost:3000', {
+      withCredentials: true,
+    });
 
     this.socket.on('connect', () => {
-      this.reconnectAttempts = 0;
+      console.log('[SOCKET] Connected');
+      this.socket?.emit('authenticate', { userId });
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      this.reconnectAttempts++;
-      
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.error('Max reconnection attempts reached');
-        this.disconnect();
-      }
+      console.error('[SOCKET] Connection error:', error);
     });
-
-    this.socket.on('notification', (notification: MatchNotification) => {
-      this.notificationCallbacks.forEach(callback => callback(notification));
-    });
-  }
-
-  authenticate(userId: string) {
-    if (!this.socket) {
-      console.error('Socket not initialized');
-      return;
-    }
-
-    if (!userId) {
-      console.error('User ID is required for authentication');
-      return;
-    }
-
-    this.socket.emit('authenticate', { userId });
-  }
-
-  onNotification(callback: NotificationCallback) {
-    this.notificationCallbacks.push(callback);
-    return () => {
-      this.notificationCallbacks = this.notificationCallbacks.filter(cb => cb !== callback);
-    };
   }
 
   disconnect() {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-      this.notificationCallbacks = [];
-      this.reconnectAttempts = 0;
-    }
+    this.socket?.disconnect();
+    this.socket = null;
   }
 
-  isConnected(): boolean {
-    return this.socket?.connected ?? false;
+  onMatchNotification(callback: (notification: INotification) => void) {
+    console.log('[SOCKET] Registering match_notification listener');
+    this.socket?.on('match_notification', (data: INotification) => {
+      console.log('[SOCKET] Received match notification:', data);
+      callback(data);
+    });
   }
 
-  reconnect() {
-    this.disconnect();
-    setTimeout(() => {
-      this.connect();
-    }, 1000);
+  offMatchNotification(callback: (notification: INotification) => void) {
+    this.socket?.off('match_notification', callback);
   }
 }
 
-export const socketService = new SocketService(); 
+export default SocketService.getInstance();

@@ -160,16 +160,7 @@ const LostItems: FC = () => {
     }
   };
 
-  const getProperImageUrl = (url: string): string => {
-    if (!url) return '';    
-    if (url.startsWith('http')) {
-      return url;
-    } else if (url.startsWith('/')) {
-      return `http://localhost:3000${url}`;
-    } else {
-      return `http://localhost:3000/uploads/${url}`;
-    }
-  };
+
 
   return (
     <div className="container mt-3">
@@ -237,20 +228,20 @@ const LostItems: FC = () => {
               return null; 
             }
             
-            const imgURL = item.imgURL || getItemProperty(item, 'imgURL');
+            const imgURL = item.imageUrl || getItemProperty(item, 'imgURL');
             
             return (
               <div key={itemId} className="col-md-6 col-lg-4 mb-4">
                 <div className="card shadow-sm h-100">
                   {imgURL && (
                     <img 
-                      src={getProperImageUrl(imgURL)} 
+                      src={imgURL} 
                       className="card-img-top" 
                       alt={item.name || getItemProperty(item, 'name') || 'Unnamed Item'}
                       style={{ height: "200px", objectFit: "cover" }}
                       onError={(e) => {
                         console.error("LostItems - Image failed to load:", imgURL);
-                        console.log("LostItems - Image URL attempted:", getProperImageUrl(imgURL));
+                        console.log("LostItems - Image URL attempted:", imgURL);
                         setTimeout(() => {
                           if (imgURL && !imgURL.startsWith('http') && !imgURL.startsWith('/')) {
                             console.log("LostItems - Trying secondary image URL format...");
@@ -263,8 +254,7 @@ const LostItems: FC = () => {
                     />
                   )}
                   <div className="card-body d-flex flex-column">
-                    <h5 className="card-title">{item.name || getItemProperty(item, 'name') || 'Unnamed Item'}</h5>
-                    <p className="card-text">{item.description || getItemProperty(item, 'description') || 'No description available'}</p>
+                    <h5 className="card-text">{item.description || getItemProperty(item, 'description') || 'No description available'}</h5>
                     <div className="mt-auto">
                       <p className="card-text mb-1">
                         <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
@@ -287,7 +277,7 @@ const LostItems: FC = () => {
                     >
                       View Details
                     </button>
-                    {currentUser?._id === (item.owner || getItemProperty(item, 'owner')) && (
+                    {currentUser?._id === (item.userId || getItemProperty(item, 'userId')) && (
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleDelete(itemId)}
@@ -307,3 +297,10 @@ const LostItems: FC = () => {
 };
 
 export default LostItems; 
+
+
+{/* <button
+className="btn btn-success position-fixed bottom-0 end-0 m-3"
+onClick={() => navigate("/create-post")}>
+<FontAwesomeIcon icon={faPlus} className="me-2" /> Add Post
+</button> */}
