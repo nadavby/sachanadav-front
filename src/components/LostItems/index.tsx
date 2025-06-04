@@ -11,7 +11,8 @@ import {
   faSearch,
   faMapMarkerAlt,
   faCalendarAlt,
-  faTag
+  faTag,
+  faPlus
 } from "@fortawesome/free-solid-svg-icons";
 import itemService from "../../services/item-service";
 
@@ -115,7 +116,7 @@ const LostItems: FC = () => {
         const name = (item.name || getItemProperty(item, 'name') || '').toLowerCase();
         const description = (item.description || getItemProperty(item, 'description') || '').toLowerCase();
         const category = (item.category || getItemProperty(item, 'category') || '').toLowerCase();
-        const location = (item.location || getItemProperty(item, 'location') || '').toLowerCase();
+        const location = (item.location || getItemProperty(item, 'location') || '').toString().toLowerCase();
         
         return name.includes(term) || 
                description.includes(term) ||
@@ -292,6 +293,11 @@ const LostItems: FC = () => {
           })}
         </div>
       )}
+      <button
+        className="btn btn-success position-fixed bottom-0 end-0 m-3"
+        onClick={() => navigate("/upload-item")}>
+        <FontAwesomeIcon icon={faPlus} className="me-2" /> Add Item
+      </button>
     </div>
   );
 };

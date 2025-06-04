@@ -6,15 +6,13 @@ import {
   faArrowLeft,
   faCheckCircle,
   faExclamationTriangle,
-  faEnvelope,
-  faPhone,
-  faInfoCircle,
   faComment
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../hooks/useAuth';
 import itemService, { Item } from '../../services/item-service';
 import matchService, { IMatch } from '../../services/match-service';
 import './MatchConfirmation.css';
+import ChatRoom from '../ChatRoom';
 
 interface MatchConfirmationProps {
   matchId?: string;
@@ -33,11 +31,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState(1);
-  const [contactMethod, setContactMethod] = useState<'email' | 'phone' | 'other'>('email');
-  const [contactDetails, setContactDetails] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmationSuccess, setConfirmationSuccess] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     if (!matchId) {
@@ -85,11 +79,8 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
   };
 
   const handleNextStep = () => {
-    setConfirmStep(step => step + 1);
-  };
-
-  const handlePrevStep = () => {
-    setConfirmStep(step => step - 1);
+    setConfirmStep(2);
+    setShowChat(true);
   };
 
   const formatLocation = (location: any): string => {
@@ -172,30 +163,6 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     );
   }
 
-  if (confirmationSuccess) {
-    return (
-      <div className="container mt-5">
-        <div className="success-confirmation text-center py-5">
-          <div className="success-icon mb-4">
-            <FontAwesomeIcon icon={faCheckCircle} size="3x" />
-          </div>
-          <h2>Match Confirmed!</h2>
-          <p className="lead mb-4">
-            Great! You've confirmed that this is a match. The other user will be notified with your contact details.
-          </p>
-          <div className="d-flex justify-content-center gap-3">
-            <button
-              className="btn btn-outline-primary"
-              onClick={() => navigate('/dashboard')}
-            >
-              Go to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mt-4">
       <div className="d-flex align-items-center mb-4">
@@ -214,14 +181,9 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
           <div className="step-label">Review Items</div>
         </div>
         <div className={`progress-connector ${confirmStep > 1 ? 'active' : ''}`}></div>
-        <div className={`progress-step ${confirmStep >= 2 ? 'active' : ''} ${confirmStep > 2 ? 'completed' : ''}`}>
+        <div className={`progress-step ${confirmStep >= 2 ? 'active' : ''}`}>
           <div className="step-number">2</div>
-          <div className="step-label">Contact Info</div>
-        </div>
-        <div className={`progress-connector ${confirmStep > 2 ? 'active' : ''}`}></div>
-        <div className={`progress-step ${confirmStep >= 3 ? 'active' : ''}`}>
-          <div className="step-number">3</div>
-          <div className="step-label">Confirm</div>
+          <div className="step-label">Chat</div>
         </div>
       </div>
       
@@ -288,150 +250,23 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
                 className="btn btn-primary"
                 onClick={handleNextStep}
               >
-                Continue
+                <FontAwesomeIcon icon={faComment} className="me-2" />
+                Start Chat
               </button>
             </div>
           </div>
         </div>
       )}
       
-      {confirmStep === 2 && (
+      {confirmStep === 2 && showChat && (
         <div className="card shadow-sm mb-4">
           <div className="card-body">
-            <h3 className="card-title mb-4">Contact Information</h3>
-            
-            <div className="alert alert-info mb-4">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="me-2" />
-              Please provide your contact information so the other user can get in touch with you.
-            </div>
-            
-            <div className="mb-4">
-              <label className="form-label">How would you like to be contacted?</label>
-              <div className="contact-method-buttons">
-                <button
-                  type="button"
-                  className={`btn ${contactMethod === 'email' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setContactMethod('email')}
-                >
-                  <FontAwesomeIcon icon={faEnvelope} className="me-2" />
-                  Email
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${contactMethod === 'phone' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setContactMethod('phone')}
-                >
-                  <FontAwesomeIcon icon={faPhone} className="me-2" />
-                  Phone
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${contactMethod === 'other' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setContactMethod('other')}
-                >
-                  <FontAwesomeIcon icon={faComment} className="me-2" />
-                  Other
-                </button>
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="contactDetails" className="form-label">
-                {contactMethod === 'email' 
-                  ? 'Your Email Address' 
-                  : contactMethod === 'phone' 
-                    ? 'Your Phone Number' 
-                    : 'Contact Details'}
-              </label>
-              <input
-                type={contactMethod === 'email' ? 'email' : 'text'}
-                className="form-control"
-                id="contactDetails"
-                value={contactDetails}
-                onChange={(e) => setContactDetails(e.target.value)}
-                placeholder={
-                  contactMethod === 'email' 
-                    ? 'example@email.com' 
-                    : contactMethod === 'phone' 
-                      ? '+1 123-456-7890' 
-                      : 'How to contact you'
-                }
-                required
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label htmlFor="message" className="form-label">Message (optional)</label>
-              <textarea
-                className="form-control"
-                id="message"
-                rows={4}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add a message for the other user..."
-              />
-            </div>
-            
-            <div className="d-flex justify-content-between mt-4">
-              <button 
-                className="btn btn-outline-secondary"
-                onClick={handlePrevStep}
-              >
-                Back
-              </button>
-              <button 
-                className="btn btn-primary"
-                onClick={handleNextStep}
-                disabled={!contactDetails}
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {confirmStep === 3 && (
-        <div className="card shadow-sm mb-4">
-          <div className="card-body">
-            <h3 className="card-title mb-4">Confirm Match</h3>
-            
-            <div className="alert alert-warning mb-4">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="me-2" />
-              By confirming this match, both items will be marked as resolved, and your contact information will be shared with the other user.
-            </div>
-            
-            <div className="confirmation-summary mb-4">
-              <h5>Summary</h5>
-              <ul className="list-group mb-3">
-                <li className="list-group-item">
-                  <strong>Your Item:</strong> {userItem?.name}
-                </li>
-                <li className="list-group-item">
-                  <strong>Matched Item:</strong> {otherItem?.name}
-                </li>
-                <li className="list-group-item">
-                  <strong>Contact Method:</strong> {contactMethod}
-                </li>
-                <li className="list-group-item">
-                  <strong>Contact Details:</strong> {contactDetails}
-                </li>
-                {message && (
-                  <li className="list-group-item">
-                    <strong>Message:</strong> {message}
-                  </li>
-                )}
-              </ul>
-            </div>
-            
-            <div className="d-flex justify-content-between mt-4">
-              <button 
-                className="btn btn-outline-secondary"
-                onClick={handlePrevStep}
-              >
-                Back
-              </button>
-            </div>
+            <ChatRoom 
+              matchId={matchId!} 
+              onClose={() => setShowChat(false)}
+              userItem={userItem}
+              otherItem={otherItem}
+            />
           </div>
         </div>
       )}
