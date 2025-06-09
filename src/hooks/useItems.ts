@@ -7,42 +7,115 @@
 
 /** @format */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import itemService, { CanceledError, Item } from "../services/item-service";
 
+// Helper functions for cache management
+const CACHE_KEY = 'lost_items_cache';
+const CACHE_TIMESTAMP_KEY = 'lost_items_cache_timestamp';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const getCache = () => {
+  try {
+    const items = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    if (!items || !timestamp) return null;
+    
+    if (Date.now() - Number(timestamp) > CACHE_DURATION) {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+      return null;
+    }
+    
+    return JSON.parse(items);
+  } catch (e) {
+    console.error('Error reading from cache:', e);
+    return null;
+  }
+};
+
+const setCache = (items: Item[]) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(items));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch (e) {
+    console.error('Error writing to cache:', e);
+  }
+};
+
 export const useLostItems = () => {
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<Item[]>(() => getCache() || []);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const mounted = useRef(false);
+  const fetchingRef = useRef(false);
 
-  useEffect(() => {
+  const fetchItems = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
     console.log("Fetching lost items...");
     setIsLoading(true);
     setError(null);
 
-    const { request, abort } = itemService.getAllLostItems();
-    request
-      .then((res) => {
-        setItems(res.data);
+    try {
+      const { request, abort } = itemService.getAllLostItems();
+      const response = await request;
+      
+      if (mounted.current) {
+        const newItems = response.data;
+        setItems(newItems);
+        setCache(newItems);
         setIsLoading(false);
-      })
-      .catch((err) => {
-        if (err instanceof CanceledError || err.code === "ERR_CANCELED") {
-          console.log("Request was canceled");
-          return;
-        }
+      }
+    } catch (err: any) {
+      if (err instanceof CanceledError || err.code === "ERR_CANCELED") {
+        console.log("Request was canceled");
+        return;
+      }
+      if (mounted.current) {
         setError(err.message);
         console.error("Error fetching lost items:", err);
         setIsLoading(false);
-      });
+      }
+    } finally {
+      fetchingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    mounted.current = true;
+    
+    const cachedItems = getCache();
+    if (cachedItems) {
+      setItems(cachedItems);
+      setIsLoading(false);
+    } else {
+      fetchItems();
+    }
 
     return () => {
-      console.log("Cleaning up lost items fetch");
-      abort();
+      mounted.current = false;
     };
   }, []);
 
-  return { items, error, isLoading, setItems, setError, setIsLoading };
+  const refreshItems = () => {
+    if (!mounted.current || fetchingRef.current) return;
+    
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+    fetchItems();
+  };
+
+  return { 
+    items, 
+    error, 
+    isLoading, 
+    setItems, 
+    setError, 
+    setIsLoading, 
+    refreshItems 
+  };
 };
 
 export const useFoundItems = () => {

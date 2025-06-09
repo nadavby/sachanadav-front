@@ -8,7 +8,7 @@ import {
   useContext,
   ReactNode,
 } from "react";
-import socketService from "../services/socket.service";
+import socketService from "../services/notification.socket.service";
 import notificationService, {
   INotification,
   CanceledError,

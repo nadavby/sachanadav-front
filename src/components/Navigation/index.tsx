@@ -8,7 +8,8 @@ import {
   faUserCircle,
   faSearch,
   faUpload,
-  faLightbulb
+  faLightbulb,
+  faMapMarkerAlt
 } from "@fortawesome/free-solid-svg-icons";
 import "./styles.css"; 
 
@@ -79,6 +80,16 @@ const Navigation: FC = () => {
                   >
                     <FontAwesomeIcon icon={faUpload} className="me-1" />
                     Upload Item
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/map"
+                    className={`nav-link ${location.pathname === '/map' ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    <FontAwesomeIcon icon={faMapMarkerAlt} className="me-1" />
+                    Map
                   </Link>
                 </li>
               </ul>

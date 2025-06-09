@@ -303,10 +303,3 @@ const LostItems: FC = () => {
 };
 
 export default LostItems; 
-
-
-{/* <button
-className="btn btn-success position-fixed bottom-0 end-0 m-3"
-onClick={() => navigate("/create-post")}>
-<FontAwesomeIcon icon={faPlus} className="me-2" /> Add Post
-</button> */}

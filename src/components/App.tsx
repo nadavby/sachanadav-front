@@ -12,7 +12,7 @@ import Navigation from "./Navigation";
 import { NotificationsProvider } from "../hooks/useNotifications";
 import NotificationProvider from "./NotificationProvider";
 import MatchConfirmation from "./MatchConfirmation";
-  
+import LostItemsMap from "./LostItemsMap";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -54,6 +54,10 @@ function App() {
           <Route
             path="/match-confirmation/:matchId"
             element={<MatchConfirmation />}
+          />
+          <Route
+            path="/map"
+            element={<LostItemsMap />}
           />
         </Routes>
       </NotificationProvider>
