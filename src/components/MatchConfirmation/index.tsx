@@ -28,6 +28,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
   const [match, setMatch] = useState<IMatch | null>(null);
   const [userItem, setUserItem] = useState<Item | null>(null);
   const [otherItem, setOtherItem] = useState<Item | null>(null);
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState(1);
@@ -65,9 +66,11 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
       if (item1.userId === currentUser?._id) {
         setUserItem(item1);
         setOtherItem(item2);
+        setOtherUserId(matchData.userId2);
       } else {
         setUserItem(item2);
         setOtherItem(item1);
+        setOtherUserId(matchData.userId1);
       }
       
     } catch (error) {
@@ -79,6 +82,10 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
   };
 
   const handleNextStep = () => {
+    if (!otherUserId) {
+      setError('Cannot start chat: other user not found');
+      return;
+    }
     setConfirmStep(2);
     setShowChat(true);
   };
@@ -123,10 +130,10 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     );
   }
 
-  if (!userItem || !otherItem) {
+  if (!userItem || !otherItem || !otherUserId) {
     return (
       <div className="container mt-5">
-        <div className="alert alert-warning">Items not found.</div>
+        <div className="alert alert-warning">Match details not found.</div>
         <button
           className="btn btn-primary"
           onClick={() => navigate(-1)}
@@ -190,28 +197,19 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
       {confirmStep === 1 && (
         <div className="card shadow-sm mb-4">
           <div className="card-body">
-            <h3 className="card-title mb-4">Review Items</h3>
-            
-            <div className="alert alert-info mb-4">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="me-2" />
-              Please review both items carefully to confirm they are a match.
-            </div>
-            
-            <div className="row">
-              <div className="col-md-6 mb-4 mb-md-0">
+            <div className="row g-4">
+              <div className="col-md-6">
                 <div className="card h-100">
                   <div className="card-header bg-primary text-white">
                     Your Item
                   </div>
                   <div className="card-body">
-                    <div className="image-container text-center">
-                      <img 
-                        src={userItem?.imageUrl} 
-                        alt={userItem?.name}
-                        className="img-fluid rounded mb-3"
-                        style={{ maxHeight: '300px', objectFit: 'contain' }}
-                      />
-                    </div>
+                    <img 
+                      src={userItem?.imageUrl} 
+                      alt={userItem?.name}
+                      className="img-fluid rounded mb-3"
+                      style={{ maxHeight: '300px', objectFit: 'contain' }}
+                    />
                     <h5 className="card-text">{userItem?.description}</h5>
                     <ul className="list-group list-group-flush mb-3">
                       <li className="list-group-item"><strong>Category:</strong> {userItem?.category}</li>
@@ -228,12 +226,12 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
                     Matched Item
                   </div>
                   <div className="card-body">
-                      <img 
-                        src={otherItem?.imageUrl} 
-                        alt={otherItem?.name}
-                        className="img-fluid rounded mb-3"
-                        style={{ maxHeight: '300px', objectFit: 'contain' }}
-                      />
+                    <img 
+                      src={otherItem?.imageUrl} 
+                      alt={otherItem?.name}
+                      className="img-fluid rounded mb-3"
+                      style={{ maxHeight: '300px', objectFit: 'contain' }}
+                    />
                     <h5 className="card-text">{otherItem?.description}</h5>
                     <ul className="list-group list-group-flush mb-3">
                       <li className="list-group-item"><strong>Category:</strong> {otherItem?.category}</li>
@@ -266,6 +264,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
               onClose={() => setShowChat(false)}
               userItem={userItem}
               otherItem={otherItem}
+              otherUserId={otherUserId}
             />
           </div>
         </div>

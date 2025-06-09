@@ -1,5 +1,6 @@
 /** @format */
 
+import { FC } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Login } from "./Login";
 import { RegistrationForm } from "./RegristrationForm";
@@ -10,18 +11,19 @@ import ItemUpload from "./ItemUpload";
 import ItemDetail from "./ItemDetail";
 import Navigation from "./Navigation";
 import { NotificationsProvider } from "../hooks/useNotifications";
-import NotificationProvider from "./NotificationProvider";
 import MatchConfirmation from "./MatchConfirmation";
 import LostItemsMap from "./LostItemsMap";
 import PublicUserProfile from "./PublicUserProfile";
+import Chats from "./Chats";
+import "./App.css";
 
-function App() {
+const App: FC = () => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <p>Loading...</p>;
   
   return (
     <NotificationsProvider>
-      <NotificationProvider>
+      <div className="app">
         <Navigation />
         <Routes>
           <Route
@@ -64,10 +66,14 @@ function App() {
             path="/map"
             element={<LostItemsMap />}
           />
+          <Route
+            path="/chats"
+            element={<Chats />}
+          />
         </Routes>
-      </NotificationProvider>
+      </div>
     </NotificationsProvider>
   );
-}
+};
 
 export default App;
