@@ -113,13 +113,17 @@ const UserProfile: FC = () => {
     if (watchProfileImage && watchProfileImage.length > 0) {
       const file = watchProfileImage[0];
       setSelectedImage(file);
-      setTempImageUrl(URL.createObjectURL(file));
       
+      // Create and set the temporary URL for preview
+      const newTempUrl = URL.createObjectURL(file);
+      setTempImageUrl(newTempUrl);
+      
+      // Cleanup function to revoke the object URL
       return () => {
-        if (tempImageURL) URL.revokeObjectURL(tempImageURL);
+        URL.revokeObjectURL(newTempUrl);
       };
     }
-  }, [watchProfileImage, tempImageURL]);
+  }, [watchProfileImage]);
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!localUser || !localUser._id) return;
@@ -261,7 +265,7 @@ const UserProfile: FC = () => {
                 src={tempImageURL || localUser.imgURL || defaultAvatar}
                 alt="Profile"
                 className="rounded-circle img-thumbnail"
-                style={{ width: "120px", height: "120px", objectFit: "cover" }}
+                style={{ width: "150px", height: "150px", objectFit: "cover" }}
               />
               
               {isEditing && (
