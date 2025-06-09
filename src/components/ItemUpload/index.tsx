@@ -17,7 +17,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { itemCategories, ItemCategoryGroup } from "../../data/itemCategories";
 import { useLoadScript } from "@react-google-maps/api";
-import MultiMatchesModal, { MatchResult } from "../MultiMatchesModal";
+import { itemColors } from "../../data/itemColors";
+import { getAvailableMaterials } from "../../data/ItemMaterials";
+
 
 interface Location {
   lat: number;
@@ -30,6 +32,11 @@ interface ItemFormData {
   itemType: string;
   otherItemType?: string;
   description: string;
+  colors?: string[];
+  brand?: string;
+  condition?: string;
+  flaws?: string;
+  material?: string;
   date: string;
   location: Location;
 }
@@ -55,7 +62,7 @@ const ItemUpload: FC = () => {
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   
-  const [apiKey] = useState(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyCqhXlqSGDjbIsC8sFcADsTV2z3nbuwLCs");
+  const [apiKey] = useState("AIzaSyAlx_vvH0P5fepk8bHpzO54syb5heCvJXI");
   
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey,
@@ -68,19 +75,23 @@ const ItemUpload: FC = () => {
     itemType: "",
     otherItemType: "",
     description: "",
+    colors: [],
+    brand: "",
+    condition: "",
+    flaws: "",
+    material: "",
     date: new Date().toISOString().split('T')[0],
     location: defaultLocation
   });
   
   const [selectedCategoryGroup, setSelectedCategoryGroup] = useState<ItemCategoryGroup | null>(null);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [availableMaterials, setAvailableMaterials] = useState<any[]>([]);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [matchResults, setMatchResults] = useState<MatchResult[] | null>(null);
-  const [uploadedItemId, setUploadedItemId] = useState<string | null>(null);
   const [uploadedItemName, setUploadedItemName] = useState<string | null>(null);
-  const [showMatchesModal, setShowMatchesModal] = useState(false);
   const [otherCategory, setOtherCategory] = useState<string>("");
   const [mapInitialized, setMapInitialized] = useState(false);
 
@@ -184,6 +195,41 @@ const ItemUpload: FC = () => {
       itemType: ""
     }));
     setOtherCategory("");
+    const materials = getAvailableMaterials(groupLabel);
+    setAvailableMaterials(materials);
+  };
+  
+  const handleColorChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const selectedColor = e.target.value;
+    if (selectedColor && !selectedColors.includes(selectedColor)) {
+      const newColors = [...selectedColors, selectedColor];
+      setSelectedColors(newColors);
+      setFormData(prev => ({
+        ...prev,
+        colors: newColors
+      }));
+    }
+    // Reset the select to show placeholder
+    e.target.value = "";
+  };
+  
+  const removeColor = (colorToRemove: string) => {
+    const newColors = selectedColors.filter(color => color !== colorToRemove);
+    setSelectedColors(newColors);
+    setFormData(prev => ({
+      ...prev,
+      colors: newColors
+    }));
+  };
+  
+  const getColorDisplay = (colorValue: string) => {
+    const color = itemColors.find(c => c.value === colorValue);
+    return color ? color.label : colorValue;
+  };
+
+  const getColorHex = (colorValue: string) => {
+    const color = itemColors.find(c => c.value === colorValue);
+    return color?.hexCode;
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -252,6 +298,11 @@ const ItemUpload: FC = () => {
       submitData.append('name', itemName);
       submitData.append('description', formData.description);
       submitData.append('category', formData.categoryGroup);
+      submitData.append('colors', formData.colors?.join(', ') || '');
+      submitData.append('brand', formData.brand || '');
+      submitData.append('condition', formData.condition || '');
+      submitData.append('flaws', formData.flaws || '');
+      submitData.append('material', formData.material || '');
       submitData.append('location', formData.location ? JSON.stringify(formData.location) : '');
       submitData.append('date', formData.date);
       submitData.append('itemType', formData.kind); 
@@ -273,31 +324,12 @@ const ItemUpload: FC = () => {
       let uploadedId = null;
       let matchResultsData = null;
       
-      if (response.data?.data?._id) {
-        uploadedId = response.data.data._id;
-        matchResultsData = response.data.matchResults;
-      } else if (response.data?._id) {
-        uploadedId = response.data._id;
-        matchResultsData = response.data.matchResults;
-      } else if (response.data?.data?.id) {
+      if (response.data?.data?.id) {
         uploadedId = response.data.data.id;
         matchResultsData = response.data.matchResults;
-      } else if (typeof response.data === 'object' && response.data !== null) {
-        const data = response.data;
-        if (data._id) {
-          uploadedId = data._id;
-          matchResultsData = data.matchResults;
-        } else if (data.id) {
-          uploadedId = data.id;
-          matchResultsData = data.matchResults;
-        } else if (data.data && (data.data._id || data.data.id)) {
-          uploadedId = data.data._id || data.data.id;
-          matchResultsData = data.matchResults || data.data.matchResults;
-        }
-      }
+      } 
       
       if (uploadedId) {
-        setUploadedItemId(uploadedId);
         setUploadedItemName(itemName);
         
         console.log("Successfully extracted item ID:", uploadedId);
@@ -315,10 +347,7 @@ const ItemUpload: FC = () => {
           ownerName: match.item.ownerName || match.ownerName,
           ownerEmail: match.item.ownerEmail || match.ownerEmail
         }));
-        
-        setMatchResults(formattedMatches);
-        setShowMatchesModal(true);
-        
+
         // Log modal props before showing
         console.log("Showing modal with props:", {
           showMatchesModal: true,
@@ -327,7 +356,7 @@ const ItemUpload: FC = () => {
           matchResults: formattedMatches
         });
       } else {
-        navigate(formData.kind === 'lost' ? '/lost-items' : '/found-items');
+        navigate('/profile');
       }
     } catch (err: any) {
       console.error("Error uploading item:", err);
@@ -343,11 +372,6 @@ const ItemUpload: FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleCloseMatchesModal = () => {
-    setShowMatchesModal(false);
-    navigate(formData.kind === 'lost' ? '/lost-items' : '/found-items');
   };
 
   if (loadError) {
@@ -466,7 +490,151 @@ const ItemUpload: FC = () => {
                     required
                   />
                 </div>
+                  {/* Add Colors field here */}
+                  <div className="mb-3">
+                  <label className="form-label">
+                    <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
+                    Colors
+                  </label>
+                  
+                  {/* Selected colors display */}
+                  {selectedColors.length > 0 && (
+                    <div className="mb-2">
+                      <small className="text-muted">Selected colors:</small>
+                      <div className="d-flex flex-wrap gap-2 mt-1">
+                        {selectedColors.map((colorValue, index) => (
+                          <span
+                            key={index}
+                            className="badge bg-secondary d-flex align-items-center"
+                            style={{ fontSize: '0.9em' }}
+                          >
+                            {getColorHex(colorValue) && (
+                              <span
+                                className="me-2"
+                                style={{
+                                  display: 'inline-block',
+                                  width: '12px',
+                                  height: '12px',
+                                  backgroundColor: getColorHex(colorValue),
+                                  border: '1px solid #ccc',
+                                  borderRadius: '2px'
+                                }}
+                              ></span>
+                            )}
+                            {getColorDisplay(colorValue)}
+                            <button
+                              type="button"
+                              className="btn-close btn-close-white ms-2"
+                              style={{ fontSize: '0.7em' }}
+                              onClick={() => removeColor(colorValue)}
+                              aria-label="Remove color"
+                            ></button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Color selection dropdown */}
+                  <select
+                    className="form-select"
+                    onChange={handleColorChange}
+                    value=""
+                  >
+                    <option value="">Add a color...</option>
+                    {itemColors
+                      .filter(color => !selectedColors.includes(color.value))
+                      .map((color) => (
+                        <option key={color.value} value={color.value}>
+                          {color.label}
+                        </option>
+                      ))}
+                  </select>
+                  
+                  <small className="form-text text-muted">
+                    You can select multiple colors for your item.
+                  </small>
+                </div>
+                {/* Brand Field */}
+                <div className="mb-3">
+                  <label htmlFor="brand" className="form-label">Brand (Optional)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="brand"
+                    name="brand"
+                    value={formData.brand}
+                    onChange={handleChange}
+                    placeholder="e.g., Apple, Nike, Samsung..."
+                  />
+                  <small className="form-text text-muted">
+                    Enter the brand name if known.
+                  </small>
+                </div>
                 
+                 {/* Condition Field */}
+                 <div className="mb-3">
+                  <label htmlFor="condition" className="form-label">Condition</label>
+                  <select
+                    className="form-select"
+                    id="condition"
+                    name="condition"
+                    value={formData.condition}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Select condition</option>
+                    <option value="new">New - Like new, unused</option>
+                    <option value="worn">Worn - Used but in good condition</option>
+                    <option value="damaged">Damaged - Has visible damage or defects</option>
+                    <option value="other">Other - Please specify in flaws</option>
+                  </select>
+                </div>
+                
+                {/* Material Field - only show if category is selected */}
+                {formData.categoryGroup && availableMaterials.length > 0 && (
+                  <div className="mb-3">
+                    <label htmlFor="material" className="form-label">Material</label>
+                    <select
+                      className="form-select"
+                      id="material"
+                      name="material"
+                      value={formData.material}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select material (optional)</option>
+                      {availableMaterials.map((material) => (
+                        <option key={material.value} value={material.value}>
+                          {material.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="form-text text-muted">
+                      Select the primary material of the item.
+                    </small>
+                  </div>
+                )}
+                
+                {/* Flaws Field */}
+                <div className="mb-3">
+                  <label htmlFor="flaws" className="form-label">
+                    Flaws & Additional Details (Optional)
+                  </label>
+                  <textarea
+                    className="form-control"
+                    id="flaws"
+                    name="flaws"
+                    rows={3}
+                    value={formData.flaws}
+                    onChange={handleChange}
+                    placeholder="Describe any scratches, dents, missing parts, or other specific details that would help identify the item..."
+                  />
+                  <small className="form-text text-muted">
+                    Be specific about any damage, wear marks, or unique characteristics. 
+                    This information is crucial for proper identification.
+                  </small>
+                </div>
+
                 <div className="mb-3">
                   <label htmlFor="date" className="form-label">
                     <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
@@ -615,15 +783,6 @@ const ItemUpload: FC = () => {
           </button>
         </div>
       </form>
-
-      <MultiMatchesModal
-        isOpen={showMatchesModal}
-        onClose={handleCloseMatchesModal}
-        itemId={uploadedItemId || undefined}
-        itemName={uploadedItemName || undefined}
-        itemImage={imagePreview || undefined}
-        matches={matchResults || []}
-      />
     </div>
   );
 };

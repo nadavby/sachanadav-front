@@ -12,16 +12,22 @@ import Navigation from "./Navigation";
 import { NotificationsProvider } from "../hooks/useNotifications";
 import NotificationProvider from "./NotificationProvider";
 import MatchConfirmation from "./MatchConfirmation";
+import LostItemsMap from "./LostItemsMap";
+import PublicUserProfile from "./PublicUserProfile";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
-
   if (loading) return <p>Loading...</p>;
+  
   return (
     <NotificationsProvider>
       <NotificationProvider>
         <Navigation />
         <Routes>
+          <Route
+            path="/public-user/:userId"
+            element={<PublicUserProfile />}
+          />
           <Route
             path="/"
             element={isAuthenticated ? <LostItems /> : <Login />}
@@ -51,8 +57,12 @@ function App() {
             element={<ItemDetail />}
           />
           <Route
-            path="/item/:itemId/match/:matchId"
+            path="/match-confirmation/:matchId"
             element={<MatchConfirmation />}
+          />
+          <Route
+            path="/map"
+            element={<LostItemsMap />}
           />
         </Routes>
       </NotificationProvider>

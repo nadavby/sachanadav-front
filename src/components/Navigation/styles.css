@@ -169,4 +169,115 @@
 .btn-profile:focus {
   box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
   outline: none;
+}
+
+/* QR Code Button */
+.btn-qr {
+  color: white;
+  background: none;
+  border: none;
+  padding: 0.4rem 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-qr:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.btn-qr:focus {
+  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+  outline: none;
+}
+
+/* QR Code Dropdown */
+.qr-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 300px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.qr-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.qr-code-container {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qr-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.qr-description {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 0.5rem 0 1rem 0;
+  max-width: 250px;
+}
+
+.qr-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+  width: 100%;
+}
+
+.qr-actions button {
+  min-width: 100px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.qr-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Test Link Button */
+.btn-link {
+  color: #0d6efd;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.btn-link:hover {
+  color: #0a58ca;
+  text-decoration: none;
+  background-color: rgba(13, 110, 253, 0.05);
+  border-radius: 4px;
+}
+
+.btn-link:focus {
+  box-shadow: none;
 } 

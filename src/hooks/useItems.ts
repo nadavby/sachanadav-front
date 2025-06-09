@@ -1,35 +1,121 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * eslint-disable @typescript-eslint/no-explicit-any
+ *
+ * @format
+ */
+
 /** @format */
 
-import { useEffect, useState } from 'react';
-import itemService, { CanceledError, Item } from '../services/item-service';
+import { useEffect, useState, useRef } from "react";
+import itemService, { CanceledError, Item } from "../services/item-service";
+
+// Helper functions for cache management
+const CACHE_KEY = 'lost_items_cache';
+const CACHE_TIMESTAMP_KEY = 'lost_items_cache_timestamp';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const getCache = () => {
+  try {
+    const items = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    if (!items || !timestamp) return null;
+    
+    if (Date.now() - Number(timestamp) > CACHE_DURATION) {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+      return null;
+    }
+    
+    return JSON.parse(items);
+  } catch (e) {
+    console.error('Error reading from cache:', e);
+    return null;
+  }
+};
+
+const setCache = (items: Item[]) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(items));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch (e) {
+    console.error('Error writing to cache:', e);
+  }
+};
 
 export const useLostItems = () => {
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<Item[]>(() => getCache() || []);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
- 
-  useEffect(() => {
+  const mounted = useRef(false);
+  const fetchingRef = useRef(false);
+
+  const fetchItems = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
     console.log("Fetching lost items...");
-    
-    const { request, abort } = itemService.getAllLostItems();
-    request
-      .then((res) => {
-        setItems(res.data);
-      })
-      .catch((err) => {
-        if (err instanceof CanceledError) return;
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { request, abort } = itemService.getAllLostItems();
+      const response = await request;
+      
+      if (mounted.current) {
+        const newItems = response.data;
+        setItems(newItems);
+        setCache(newItems);
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      if (err instanceof CanceledError || err.code === "ERR_CANCELED") {
+        console.log("Request was canceled");
+        return;
+      }
+      if (mounted.current) {
         setError(err.message);
         console.error("Error fetching lost items:", err);
-      })
-      .finally(() => {
         setIsLoading(false);
-      });
+      }
+    } finally {
+      fetchingRef.current = false;
+    }
+  };
 
-    return () => abort();
+  useEffect(() => {
+    mounted.current = true;
+    
+    const cachedItems = getCache();
+    if (cachedItems) {
+      setItems(cachedItems);
+      setIsLoading(false);
+    } else {
+      fetchItems();
+    }
+
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
-  return { items, error, isLoading, setItems, setError, setIsLoading };
+  const refreshItems = () => {
+    if (!mounted.current || fetchingRef.current) return;
+    
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+    fetchItems();
+  };
+
+  return { 
+    items, 
+    error, 
+    isLoading, 
+    setItems, 
+    setError, 
+    setIsLoading, 
+    refreshItems 
+  };
 };
 
 export const useFoundItems = () => {
@@ -40,7 +126,7 @@ export const useFoundItems = () => {
   useEffect(() => {
     console.log("Fetching found items...");
     setIsLoading(true);
-    
+
     const { request, abort } = itemService.getAllFoundItems();
     request
       .then((res) => {
@@ -50,9 +136,17 @@ export const useFoundItems = () => {
           const sampleItem = res.data[0];
           console.log("Found item fields:", Object.keys(sampleItem));
           console.log("Sample found item complete data:", sampleItem);
-          
+
           res.data.slice(0, 3).forEach((item: any, index: number) => {
-            console.log(`Found Item ${index} - Name: ${item.name || 'MISSING NAME'}, Description: ${item.description || 'MISSING DESC'}, Category: ${item.category || 'MISSING CATEGORY'}, Location: ${item.location || 'MISSING LOCATION'}`);
+            console.log(
+              `Found Item ${index} - Name: ${
+                item.name || "MISSING NAME"
+              }, Description: ${
+                item.description || "MISSING DESC"
+              }, Category: ${item.category || "MISSING CATEGORY"}, Location: ${
+                item.location || "MISSING LOCATION"
+              }`
+            );
           });
         }
         setItems(res.data);
@@ -76,52 +170,26 @@ export const useUserItems = (userId: string) => {
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
- 
+
   useEffect(() => {
     if (!userId) return;
-    
+
     console.log("Fetching user items...");
     setIsLoading(true);
     const { request, abort } = itemService.getItemsByUser(userId);
-    request.then((res) => {
-      setIsLoading(false);
-      setItems(res.data);
-    }).catch((error) => {
-      if (!(error instanceof CanceledError)) {
+    request
+      .then((res) => {
+        console.log("Raw user items response:", res.data);
+        setItems(res.data);
+        setIsLoading(false);
+      })
+      .catch((error) => {
         setError(error.message);
         setIsLoading(false);
-      }
-    });
-   
+      });
+
     return abort;
   }, [userId]);
 
   return { items, error, isLoading, setItems, setError, setIsLoading };
 };
-
-export const useItemMatches = (itemId: string) => {
-  const [matches, setMatches] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
- 
-  useEffect(() => {
-    if (!itemId) return;
-    
-    console.log("Fetching item matches...");
-    setIsLoading(true);
-    const { request, abort } = itemService.getMatchResults(itemId);
-    request.then((res) => {
-      setIsLoading(false);
-      setMatches(res.data);
-    }).catch((error) => {
-      if (!(error instanceof CanceledError)) {
-        setError(error.message);
-        setIsLoading(false);
-      }
-    });
-   
-    return abort;
-  }, [itemId]);
-
-  return { matches, error, isLoading, setMatches, setError, setIsLoading };
-}; 

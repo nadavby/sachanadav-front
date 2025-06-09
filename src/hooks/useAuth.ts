@@ -35,7 +35,6 @@ export const useAuth = () => {
   const checkAuthState = useCallback(async () => {
     setLoading(true);
     
-    // Only set a timeout for initial auth check, not for manual updates
     const timeoutId = setTimeout(() => {
       console.warn("Auth check timed out");
       setLoading(false);
