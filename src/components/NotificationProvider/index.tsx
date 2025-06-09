@@ -2,16 +2,20 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuth } from '../../hooks/useAuth';
-import { Dropdown, Badge } from 'react-bootstrap';
-import { BsBell, BsTrash, BsCheck2All } from 'react-icons/bs';
+import { Dropdown } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faEnvelope, faEnvelopeOpen, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faEnvelope, faEnvelopeOpen, faCheck, faCheckDouble, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { INotification } from '../../services/notification-service';
 import MatchDetailModal from '../MatchDetailModal';
 import './styles.css';
 
-const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { notifications, removeNotification, clearNotifications, markAsRead, markAllAsRead, unreadCount } = useNotifications();
+interface NotificationProviderProps {
+  children: React.ReactNode;
+  notificationTrigger?: React.ReactNode;
+}
+
+const NotificationProvider: React.FC<NotificationProviderProps> = ({ children, notificationTrigger }) => {
+  const { notifications, removeNotification, clearNotifications, markAsRead, markAllAsRead } = useNotifications();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [show, setShow] = useState(false);
@@ -20,7 +24,6 @@ const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const handleToggle = (nextShow: boolean) => {
     setShow(nextShow);
-    console.log('[DROPDOWN] Dropdown', nextShow ? 'opened' : 'closed', 'with', notifications.length, 'notifications');
   };
 
   const handleNotificationClick = async (notification: INotification) => {
@@ -32,7 +35,6 @@ const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!notification.isRead && notification._id) {
       await markAsRead(notification._id);
     }
-    console.log('Notification clicked:', notification);
   };
 
   const handleRemoveNotification = async (e: React.MouseEvent, notification: INotification) => {
@@ -101,64 +103,53 @@ const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <>
       {isAuthenticated && (
-        <div className="notification-dropdown-container">
-          <Dropdown show={show} onToggle={handleToggle} align="end">
-            <Dropdown.Toggle 
-              variant="light" 
-              id="notification-dropdown"
-              className="notification-bell-button"
-            >
-              <BsBell size={20} />
-              {unreadCount > 0 && (
-                <Badge bg="danger" className="notification-badge">
-                  {unreadCount}
-                </Badge>
-              )}
-            </Dropdown.Toggle>
+        <Dropdown show={show} onToggle={handleToggle} align="end">
+          <Dropdown.Toggle as="div" id="notification-dropdown">
+            {notificationTrigger}
+          </Dropdown.Toggle>
 
-            <Dropdown.Menu className="notification-menu">
-              <div className="notification-header">
-                <h6 className="mb-0">Notifications ({notifications.length})</h6>
-                <div className="notification-actions">
-                  {unreadCount > 0 && (
-                    <button 
-                      className="mark-all-read-btn" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        markAllAsRead();
-                      }}
-                      title="Mark all as read"
-                    >
-                      <BsCheck2All />
-                    </button>
-                  )}
-                  {notifications.length > 0 && (
-                    <button 
-                      className="clear-all-btn" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        clearNotifications();
-                      }}
-                      title="Clear all notifications"
-                    >
-                      <BsTrash />
-                    </button>
-                  )}
-                </div>
-              </div>
-              
-              <div className="notification-list">
-                {notifications.length === 0 ? (
-                  <div className="no-notifications">
-                    No notifications
-                  </div>
-                ) : (
-                  notifications.map(renderNotificationItem)
+          <Dropdown.Menu className="notification-menu">
+            <div className="notification-header">
+              <h6 className="mb-0">Notifications ({notifications.length})</h6>
+              <div className="notification-actions">
+                {notifications.some(n => !n.isRead) && (
+                  <button 
+                    className="mark-all-read-btn" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAllAsRead();
+                    }}
+                    title="Mark all as read"
+                  >
+                    <FontAwesomeIcon icon={faCheckDouble} />
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button 
+                    className="clear-all-btn" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearNotifications();
+                    }}
+                    title="Clear all notifications"
+                  >
+                    <FontAwesomeIcon icon={faTrashAlt} />
+                  </button>
                 )}
               </div>
-            </Dropdown.Menu>
-          </Dropdown>
-        </div>
+            </div>
+            
+            <div className="notification-list">
+              {notifications.length === 0 ? (
+                <div className="no-notifications">
+                  No notifications
+                </div>
+              ) : (
+                notifications.map(renderNotificationItem)
+              )}
+            </div>
+          </Dropdown.Menu>
+        </Dropdown>
       )}
       {children}
 

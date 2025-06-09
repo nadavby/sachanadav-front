@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { useLostItems } from "../../hooks/useItems";
 import { useAuth } from "../../hooks/useAuth";
 import { Item } from "../../services/item-service";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSearch,
@@ -19,12 +19,21 @@ import itemService from "../../services/item-service";
 type SortOption = 'newest' | 'oldest' | 'category';
 
 const LostItems: FC = () => {
-  const { items, isLoading, error, setItems } = useLostItems();
+  const { items, isLoading, error, setItems, refreshItems } = useLostItems();
   const { isAuthenticated, loading: authLoading, currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('newItem') === 'true') {
+      refreshItems();
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate, refreshItems]);
 
   if (!authLoading && !isAuthenticated) {
     navigate("/login");
@@ -89,22 +98,6 @@ const LostItems: FC = () => {
     return String(location);
   };
 
-  const getItemProperty = (item: any, property: string): string | undefined => {
-    if (item && Object.prototype.hasOwnProperty.call(item, property)) {
-      return item[property];
-    }
-    
-    if (item && item._doc && Object.prototype.hasOwnProperty.call(item._doc, property)) {
-      return item._doc[property];
-    }
-    
-    if (item && item.fields && Object.prototype.hasOwnProperty.call(item.fields, property)) {
-      return item.fields[property];
-    }
-    
-    return undefined;
-  };
-
   const getSortedItems = () => {
     if (!items) return [];
     
@@ -113,10 +106,10 @@ const LostItems: FC = () => {
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filteredItems = filteredItems.filter(item => {
-        const name = (item.name || getItemProperty(item, 'name') || '').toLowerCase();
-        const description = (item.description || getItemProperty(item, 'description') || '').toLowerCase();
-        const category = (item.category || getItemProperty(item, 'category') || '').toLowerCase();
-        const location = (item.location || getItemProperty(item, 'location') || '').toString().toLowerCase();
+        const name = (item.name || '').toLowerCase();
+        const description = (item.description || '').toLowerCase();
+        const category = (item.category || '').toLowerCase();
+        const location = (item.location || '').toString().toLowerCase();
         
         return name.includes(term) || 
                description.includes(term) ||
@@ -130,20 +123,20 @@ const LostItems: FC = () => {
     switch (sortOption) {
       case 'newest':
         return itemsCopy.sort((a, b) => {
-          const dateA = new Date(a.date || getItemProperty(a, 'date') || 0);
-          const dateB = new Date(b.date || getItemProperty(b, 'date') || 0);
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
           return dateB.getTime() - dateA.getTime();
         });
       case 'oldest':
         return itemsCopy.sort((a, b) => {
-          const dateA = new Date(a.date || getItemProperty(a, 'date') || 0);
-          const dateB = new Date(b.date || getItemProperty(b, 'date') || 0);
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
           return dateA.getTime() - dateB.getTime();
         });
       case 'category':
         return itemsCopy.sort((a, b) => {
-          const categoryA = a.category || getItemProperty(a, 'category') || '';
-          const categoryB = b.category || getItemProperty(b, 'category') || '';
+          const categoryA = a.category || '';
+          const categoryB = b.category || '';
           return categoryA.localeCompare(categoryB);
         });
       default:
@@ -223,13 +216,13 @@ const LostItems: FC = () => {
       {sortedItems.length > 0 && (
         <div className="row">
           {sortedItems.map((item: Item) => {
-            const itemId = item._id || getItemProperty(item, '_id');
+            const itemId = item._id;
             if (!itemId) {
               console.error("Item without _id found:", item);
               return null; 
             }
             
-            const imgURL = item.imageUrl || getItemProperty(item, 'imgURL');
+            const imgURL = item.imageUrl;
             
             return (
               <div key={itemId} className="col-md-6 col-lg-4 mb-4">
@@ -238,36 +231,24 @@ const LostItems: FC = () => {
                     <img 
                       src={imgURL} 
                       className="card-img-top" 
-                      alt={item.name || getItemProperty(item, 'name') || 'Unnamed Item'}
+                      alt={item.name || 'Unnamed Item'}
                       style={{ height: "200px", objectFit: "cover" }}
-                      onError={(e) => {
-                        console.error("LostItems - Image failed to load:", imgURL);
-                        console.log("LostItems - Image URL attempted:", imgURL);
-                        setTimeout(() => {
-                          if (imgURL && !imgURL.startsWith('http') && !imgURL.startsWith('/')) {
-                            console.log("LostItems - Trying secondary image URL format...");
-                            (e.target as HTMLImageElement).src = `http://localhost:3000/uploads/${imgURL}`;
-                          } else {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200?text=No+Image';
-                          }
-                        }, 100);
-                      }}
                     />
                   )}
                   <div className="card-body d-flex flex-column">
-                    <h5 className="card-text">{item.description || getItemProperty(item, 'description') || 'No description available'}</h5>
+                    <h5 className="card-text">{item.description || 'No description available'}</h5>
                     <div className="mt-auto">
                       <p className="card-text mb-1">
                         <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
-                        {item.category || getItemProperty(item, 'category') || 'Uncategorized'}
+                        {item.category || 'Uncategorized'}
                       </p>
                       <p className="card-text mb-1">
                         <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                        {formatLocation(item.location || getItemProperty(item, 'location'))}
+                        {formatLocation(item.location)}
                       </p>
                       <p className="card-text">
                         <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
-                        {formatDate(item.date || getItemProperty(item, 'date'))}
+                        {formatDate(item.date)}
                       </p>
                     </div>
                   </div>
@@ -278,7 +259,7 @@ const LostItems: FC = () => {
                     >
                       View Details
                     </button>
-                    {currentUser?._id === (item.userId || getItemProperty(item, 'userId')) && (
+                    {currentUser?._id === (item.userId) && (
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleDelete(itemId)}

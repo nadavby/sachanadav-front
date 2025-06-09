@@ -6,12 +6,17 @@ import { apiClient, CanceledError } from "./api-client";
 
 export { CanceledError };
 
+interface Location {
+  lat: number;
+  lng: number;
+}
+
 export interface Item {
   _id?: string;
   name: string;
   description: string;
   category: string;
-  location: string;
+  location: Location | null;
   date: string;
   itemType: "lost" | "found";
   imageUrl: string;
@@ -126,9 +131,12 @@ const updateItem = async (id: string, item: Partial<Item>, image?: File) => {
     if (item.name) formData.append("name", item.name);
     if (item.description) formData.append("description", item.description);
     if (item.category) formData.append("category", item.category);
-    if (item.location) formData.append("location", item.location);
+    if (item.location) formData.append("location", item.location ? JSON.stringify(item.location) : '');
     if (item.date) formData.append("date", item.date);
     if (item.itemType) formData.append("itemType", item.itemType);
+    if (item.isResolved !== undefined) {
+      formData.append("isResolved", String(item.isResolved));
+    }
 
     formData.append("itemData", JSON.stringify(item));
     formData.append("image", image, image.name);

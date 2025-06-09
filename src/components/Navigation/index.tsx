@@ -9,13 +9,18 @@ import {
   faUpload,
   faLightbulb,
   faMapMarkerAlt,
-  faQrcode
+  faQrcode,
+  faComments,
+  faBell
 } from "@fortawesome/free-solid-svg-icons";
+import { useNotifications } from "../../hooks/useNotifications";
+import NotificationProvider from "../NotificationProvider";
 import UserQRCode from "../UserQRCode";
 import "./styles.css"; 
 
 const Navigation: FC = () => {
   const { isAuthenticated, loading, currentUser } = useAuth();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isQRDropdownOpen, setIsQRDropdownOpen] = useState(false);
@@ -37,31 +42,23 @@ const Navigation: FC = () => {
     const svgElement = document.querySelector('#qr-dropdown svg');
     if (!svgElement) return;
 
-    // Create a canvas element
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size to match SVG (with some padding)
-    canvas.width = 320; // Double the QR size for better quality
+    canvas.width = 320;
     canvas.height = 320;
 
-    // Create a Blob from the SVG
     const svgData = new XMLSerializer().serializeToString(svgElement);
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const svgUrl = URL.createObjectURL(svgBlob);
 
-    // Create an Image object
     const img = new Image();
     img.onload = () => {
-      // Fill white background
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw the image centered
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // Convert to data URL and trigger download
       const url = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = url;
@@ -76,34 +73,63 @@ const Navigation: FC = () => {
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print QR Code</title>
-            <style>
-              body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-              .qr-container { text-align: center; }
-            </style>
-          </head>
-          <body>
-            <div class="qr-container">
-              <div id="qr-code"></div>
-            </div>
-          </body>
-        </html>
-      `);
-      const qrElement = document.getElementById('qr-dropdown')?.cloneNode(true);
-      if (qrElement) {
-        printWindow.document.getElementById('qr-code')?.appendChild(qrElement);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      }
+    if (!printWindow) return;
+
+    const svgElement = document.querySelector('#qr-dropdown svg');
+    if (!svgElement) {
+      printWindow.close();
+      return;
     }
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Print QR Code</title>
+          <style>
+            body {
+              margin: 0;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+            }
+            .qr-container {
+              text-align: center;
+            }
+            .qr-code {
+              width: 300px;
+              height: 300px;
+            }
+            .print-title {
+              font-family: Arial, sans-serif;
+              color: #333;
+              margin-bottom: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <h2 class="print-title">Your Personal QR Code</h2>
+            ${svgData}
+          </div>
+          <script>
+            window.onload = () => {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
-  
+
+
+
   return (
     <nav className="navbar navbar-dark bg-primary">
       <div className="container">
@@ -118,58 +144,84 @@ const Navigation: FC = () => {
           <>    
             <div className="d-flex align-items-center order-2">
               {currentUser && (
-                <div className="position-relative me-3">
-                  <button 
-                    className="btn btn-qr"
-                    onClick={toggleQRDropdown}
-                    title="My QR Code"
-                    aria-label="Show QR code"
-                  >
-                    <FontAwesomeIcon icon={faQrcode} size="lg" />
-                  </button>
-                  {isQRDropdownOpen && (
-                    <div className="qr-dropdown" id="qr-dropdown">
-                      <div className="qr-content">
-                        <h3 className="qr-title">Your Personal QR Code</h3>
-                        <p className="qr-description">
-                          Print or save this QR code to help others find you when they discover your lost items
-                        </p>
-                        <UserQRCode userId={currentUser._id} />
-                        <div className="qr-actions">
+                <>
+                  <div className="position-relative me-3">
+                    <button 
+                      className="btn btn-qr"
+                      onClick={toggleQRDropdown}
+                      title="My QR Code"
+                      aria-label="Show QR code"
+                    >
+                      <FontAwesomeIcon icon={faQrcode} size="lg" />
+                    </button>
+                    
+                    {isQRDropdownOpen && (
+                      <div className="qr-dropdown" id="qr-dropdown">
+                        <div className="qr-content">
+                          <h3 className="qr-title">Your Personal QR Code</h3>
+                          <p className="qr-description">
+                            Print or save this QR code to help others find you when they discover your lost items
+                          </p>
+                          <UserQRCode userId={currentUser._id} />
+                          <div className="qr-actions">
+                            <button 
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={handlePrint}
+                            >
+                              Print QR
+                            </button>
+                            <button 
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={handleDownload}
+                            >
+                              Save QR
+                            </button>
+                          </div>
                           <button 
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={handlePrint}
+                            className="btn btn-sm btn-link mt-2"
+                            onClick={() => window.open(`${window.location.origin}/public-user/${currentUser._id}`, '_blank')}
                           >
-                            Print QR
-                          </button>
-                          <button 
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={handleDownload}
-                          >
-                            Save QR
+                            Test QR Link →
                           </button>
                         </div>
-                        <button 
-                          className="btn btn-sm btn-link mt-2"
-                          onClick={() => window.open(`${window.location.origin}/public-user/${currentUser._id}`, '_blank')}
-                        >
-                          Test QR Link →
-                        </button>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                  <button 
+                    className="btn btn-profile me-3" 
+                    onClick={() => navigate("/chats")}
+                    title="My Chats"
+                    aria-label="Go to chats"
+                  >
+                    <FontAwesomeIcon icon={faComments} size="lg" />
+                  </button>
+                  <NotificationProvider
+                    notificationTrigger={
+                      <button 
+                        className="btn btn-profile notification-button me-3"
+                        title="Notifications"
+                        aria-label="View notifications"
+                      >
+                        <FontAwesomeIcon icon={faBell} size="lg" />
+                        {unreadCount > 0 && (
+                          <span className="notification-badge">{unreadCount}</span>
+                        )}
+                      </button>
+                    }
+                  >
+                    {null}
+                  </NotificationProvider>
+                  <button 
+                    className="btn btn-profile me-3" 
+                    onClick={() => navigate("/profile")}
+                    title="My Profile"
+                    aria-label="Go to user profile"
+                  >
+                    <FontAwesomeIcon icon={faUserCircle} size="lg" />
+                  </button>
+                </>
               )}
               <button 
-                className="btn btn-profile me-3" 
-                onClick={() => navigate("/profile")}
-                title="My Profile"
-                aria-label="Go to user profile"
-              >
-                <FontAwesomeIcon icon={faUserCircle} size="lg" />
-              </button>
-              
-              <button
                 className="navbar-toggler"
                 type="button"
                 onClick={toggleMenu}
@@ -211,6 +263,16 @@ const Navigation: FC = () => {
                   >
                     <FontAwesomeIcon icon={faMapMarkerAlt} className="me-1" />
                     Map
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/chats"
+                    className={`nav-link ${location.pathname === '/chats' ? 'active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    <FontAwesomeIcon icon={faComments} className="me-1" />
+                    Chats
                   </Link>
                 </li>
               </ul>

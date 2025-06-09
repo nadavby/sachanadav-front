@@ -10,41 +10,8 @@
 import { useEffect, useState, useRef } from "react";
 import itemService, { CanceledError, Item } from "../services/item-service";
 
-// Helper functions for cache management
-const CACHE_KEY = 'lost_items_cache';
-const CACHE_TIMESTAMP_KEY = 'lost_items_cache_timestamp';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-const getCache = () => {
-  try {
-    const items = localStorage.getItem(CACHE_KEY);
-    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-    if (!items || !timestamp) return null;
-    
-    if (Date.now() - Number(timestamp) > CACHE_DURATION) {
-      localStorage.removeItem(CACHE_KEY);
-      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-      return null;
-    }
-    
-    return JSON.parse(items);
-  } catch (e) {
-    console.error('Error reading from cache:', e);
-    return null;
-  }
-};
-
-const setCache = (items: Item[]) => {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(items));
-    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-  } catch (e) {
-    console.error('Error writing to cache:', e);
-  }
-};
-
 export const useLostItems = () => {
-  const [items, setItems] = useState<Item[]>(() => getCache() || []);
+  const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const mounted = useRef(false);
@@ -65,7 +32,6 @@ export const useLostItems = () => {
       if (mounted.current) {
         const newItems = response.data;
         setItems(newItems);
-        setCache(newItems);
         setIsLoading(false);
       }
     } catch (err: any) {
@@ -85,14 +51,7 @@ export const useLostItems = () => {
 
   useEffect(() => {
     mounted.current = true;
-    
-    const cachedItems = getCache();
-    if (cachedItems) {
-      setItems(cachedItems);
-      setIsLoading(false);
-    } else {
-      fetchItems();
-    }
+    fetchItems();
 
     return () => {
       mounted.current = false;
@@ -101,9 +60,6 @@ export const useLostItems = () => {
 
   const refreshItems = () => {
     if (!mounted.current || fetchingRef.current) return;
-    
-    localStorage.removeItem(CACHE_KEY);
-    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
     fetchItems();
   };
 

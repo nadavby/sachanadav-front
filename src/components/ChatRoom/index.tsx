@@ -13,9 +13,10 @@ interface ChatRoomProps {
   onClose?: () => void;
   userItem?: Item;
   otherItem?: Item;
+  otherUserId?: string;
 }
 
-const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherItem }) => {
+const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherItem, otherUserId }) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<IChatMessage[]>([]);
@@ -25,21 +26,30 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!currentUser?._id) return;
+
     // Connect to chat socket and join room
     chatSocketService.connect();
+    chatSocketService.registerUser(currentUser._id);
     chatSocketService.joinChat(matchId);
 
     // Set up event listeners
     const handleChatHistory = (history: IChatMessage[]) => {
       setMessages(history);
       setIsLoading(false);
+      // Mark all received messages as read
+      history.forEach(msg => {
+        if (msg.senderId !== currentUser._id && msg.status !== 'read') {
+          chatSocketService.updateMessageStatus(msg._id, 'read');
+        }
+      });
     };
 
     const handleNewMessage = (message: IChatMessage) => {
       setMessages(prev => [...prev, message]);
-      // Mark message as delivered if it's not from current user
-      if (message.senderId !== currentUser?._id) {
-        chatSocketService.updateMessageStatus(message._id, 'delivered');
+      // Mark received message as read
+      if (message.senderId !== currentUser._id) {
+        chatSocketService.updateMessageStatus(message._id, 'read');
       }
     };
 
@@ -58,7 +68,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
       chatSocketService.offChatHistory(handleChatHistory);
       chatSocketService.offNewMessage(handleNewMessage);
       chatSocketService.offError(handleError);
-      chatSocketService.disconnect();
     };
   }, [matchId, currentUser?._id]);
 
@@ -69,9 +78,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !currentUser?._id) return;
+    if (!newMessage.trim() || !currentUser?._id || !otherUserId) return;
 
-    chatSocketService.sendMessage(matchId, currentUser._id, newMessage.trim());
+    chatSocketService.sendMessage(matchId, currentUser._id, otherUserId, newMessage.trim());
     setNewMessage('');
   };
 
@@ -118,14 +127,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
       <div className="chat-header">
         <h3>Chat</h3>
         <div className="chat-actions">
-          <button 
-            className="btn btn-success me-2" 
-            onClick={handleConfirmMatch}
-            disabled={isConfirming}
-          >
-            <FontAwesomeIcon icon={faCheck} className="me-2" />
-            Confirm Match
-          </button>
+          {userItem && otherItem && (
+            <button 
+              className="btn btn-success me-2" 
+              onClick={handleConfirmMatch}
+              disabled={isConfirming}
+            >
+              <FontAwesomeIcon icon={faCheck} className="me-2" />
+              Confirm Match
+            </button>
+          )}
           {onClose && (
             <button className="close-button" onClick={onClose}>
               ×

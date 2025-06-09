@@ -1,6 +1,8 @@
 /* Basic navbar styling */
 .navbar {
   padding: 0.75rem 1rem;
+  position: relative;
+  z-index: 2000; /* Increased z-index to be above everything */
 }
 
 /* Container layout for the three-part navigation */
@@ -110,14 +112,23 @@
 /* Ensure menu opens properly on mobile */
 @media (max-width: 991.98px) {
   .navbar-collapse {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--bs-primary);
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 2000; /* Match navbar z-index */
     transition: all 0.3s ease;
     max-height: 0;
     overflow: hidden;
-    margin-top: 1rem;
+    margin-top: 0;
   }
   
   .navbar-collapse.show {
-    max-height: 500px; /* Adjust as needed to fit all menu items */
+    max-height: 500px;
     overflow-y: auto;
   }
   
@@ -130,6 +141,7 @@
   .nav-link {
     padding: 0.5rem 1rem !important;
     border-radius: 4px;
+    color: white !important;
   }
   
   .nav-link:hover {
@@ -171,6 +183,29 @@
   outline: none;
 }
 
+/* Notification button styling */
+.notification-button {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  font-weight: bold;
+  border: 2px solid #0d6efd;
+}
+
 /* QR Code Button */
 .btn-qr {
   color: white;
@@ -203,7 +238,7 @@
   background-color: white;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 1050;
   min-width: 300px;
   padding: 1.5rem;
   text-align: center;

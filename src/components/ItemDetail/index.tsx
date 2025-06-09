@@ -1,43 +1,100 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
-  faCheck,
   faTag,
   faMapMarkerAlt,
   faCalendarAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../hooks/useAuth';
 import itemService, { Item } from '../../services/item-service';
-import { useMatch } from '../../hooks/useMatch';
-import { IMatch } from '../../services/match-service';
+import { 
+  Map, 
+  AdvancedMarker,
+  Pin,
+  APIProvider
+} from "@vis.gl/react-google-maps";
 import './ItemDetail.css';
+
+const containerStyle = {
+  width: "100%",
+  height: "300px",
+  borderRadius: '8px'
+};
+
+const defaultCenter = {
+  lat: 32.0853,
+  lng: 34.7818
+};
 
 const ItemDetail: React.FC = () => {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { matches, isLoading: matchesLoading, error: matchError } = useMatch();
-  
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<IMatch | null>(null);
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
+  const [imageError, setImageError] = useState(false);
+
+  const updateMapCenter = useCallback((itemData: any) => {
+    if (itemData?.location?.lat && itemData?.location?.lng) {
+      const lat = typeof itemData.location.lat === 'string' ? parseFloat(itemData.location.lat) : itemData.location.lat;
+      const lng = typeof itemData.location.lng === 'string' ? parseFloat(itemData.location.lng) : itemData.location.lng;
+      console.log('Updating map center:', { lat, lng });
+      setMapCenter({ lat, lng });
+    } else {
+      console.log('No valid location data in item:', itemData?.location);
+    }
+  }, []);
+
+  // Process image URL to ensure it's absolute
+  const processImageUrl = useCallback((url: string) => {
+    if (!url) return 'https://via.placeholder.com/60';
+    
+    // If it's already an absolute URL, return it
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // If it's a relative URL starting with /public, adjust it
+    if (url.startsWith('/public')) {
+      return `${window.location.origin}${url}`;
+    }
+    
+    // For other relative URLs
+    return `${window.location.origin}/${url}`;
+  }, []);
+
+  // Memoize the processed image URL
+  const processedImageUrl = useMemo(() => {
+    return item?.imageUrl ? processImageUrl(item.imageUrl) : 'https://via.placeholder.com/60';
+  }, [item?.imageUrl, processImageUrl]);
 
   useEffect(() => {
-    if (!itemId) return;
-
+    console.log('Component mounted or itemId changed:', itemId);
+    
     const fetchItem = async () => {
+      if (!itemId) {
+        console.log('No itemId provided');
+        return;
+      }
+      
       try {
         setLoading(true);
+        console.log('Fetching item data...');
         const { request } = itemService.getItemById(itemId);
         const response = await request;
-        setItem(response.data);
+        const itemData = response.data;
+        console.log('Raw item data received:', itemData);
+        console.log('Location from item:', itemData.location);
+        
+        setItem(itemData);
+        updateMapCenter(itemData);
       } catch (error) {
         console.error('Error fetching item:', error);
         setError('Failed to load item details');
@@ -47,64 +104,17 @@ const ItemDetail: React.FC = () => {
     };
 
     fetchItem();
-  }, [itemId]);
+  }, [itemId, updateMapCenter]);
 
-  const handleResolveItem = async (matchId?: string) => {
-    if (!itemId || !item) return;
-    
-    try {
-      const resolveData = {
-        ...item,
-        isResolved: true,
-        resolvedWithItemId: matchId
-      };
-
-      await itemService.updateItem(itemId, resolveData);
-      setItem({ ...item, isResolved: true });
-      setResolveDialogOpen(false);
-      
-      navigate(`/items/${item.itemType === 'lost' ? 'lost' : 'found'}`);
-    } catch (error) {
-      console.error('Error resolving item:', error);
-      setError('Failed to mark item as resolved');
-    }
-  };
-
-  const openResolveDialog = (match: IMatch | null = null) => {
-    setSelectedMatch(match);
-    setResolveDialogOpen(true);
-  };
-
-  if (loading) {
-    return (
-      <div className="container mt-5 text-center">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-        <p className="mt-2">Loading item details...</p>
-      </div>
-    );
-  }
-
-  if (error || !item) {
-    return (
-      <div className="container mt-5">
-        <div className="alert alert-danger">
-          {error || 'Item not found'}
-        </div>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => navigate(-1)}
-        >
-          <FontAwesomeIcon icon={faArrowLeft} className="me-2" />
-          Go Back
-        </button>
-      </div>
-    );
-  }
-
-  const isOwner = currentUser && currentUser._id === item.userId;
-
+  // Log state changes
+  useEffect(() => {
+    console.log('State updated:', {
+      loading,
+      hasItem: !!item,
+      mapCenter,
+      itemLocation: item?.location
+    });
+  }, [loading, item, mapCenter]);
 
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
@@ -120,131 +130,187 @@ const ItemDetail: React.FC = () => {
     return String(location);
   };
 
-  return (
-    <div className="container mt-4 pb-5">
-      <div className="d-flex align-items-center mb-4">
-        <button
-          className="btn btn-outline-secondary me-3"
+  if (loading) {
+    return (
+      <div className="item-detail-container">
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3 text-muted">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !item) {
+    return (
+      <div className="item-detail-container">
+        <div className="alert alert-danger">
+          {error || 'Item not found'}
+        </div>
+        <button 
+          className="back-button"
           onClick={() => navigate(-1)}
         >
-          <FontAwesomeIcon icon={faArrowLeft} /> Back
+          <FontAwesomeIcon icon={faArrowLeft} />
+          <span>Go Back</span>
         </button>
-        <h1 className="mb-0">
+      </div>
+    );
+  }
+
+  return (
+    <div className="item-detail-container">
+      <div className="item-header">
+        <button className="back-button" onClick={() => navigate(-1)}>
+          <FontAwesomeIcon icon={faArrowLeft} />
+          <span>Back</span>
+        </button>
+        <h1 className="item-title">
           {item.itemType === 'lost' ? 'Lost' : 'Found'} Item Details
         </h1>
       </div>
 
-      <div className="row">
-        <div className="col-lg-8">
-          <div className="card shadow-sm mb-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-start">
-                <h2 className="card-title mb-3">{item.name}</h2>
-                {item.isResolved ? (
-                  <span className="badge bg-success">Resolved</span>
-                ) : (
-                  <span className="badge bg-warning">Active</span>
-                )}
+      <div className="item-card">
+        <div className="item-details">
+          <div className="d-flex justify-content-between align-items-start mb-4">
+            <h2>{item.name}</h2>
+          </div>
+
+          <div className="row">
+            <div className="col-md-6">
+              <div className="item-image-container">
+                <img 
+                  src={item.imageUrl} 
+                  alt={item.name}
+                  className="item-image"
+                />
               </div>
-              
-              <div className="row">
-                <div className="col-md-6">
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name}
-                      className="img-fluid rounded mb-3"
-                      style={{ maxHeight: '300px', objectFit: 'contain' }}
-                      
+            </div>
+
+            <div className="col-md-6">
+              <div className="description-section">
+                <h5 className="description-text">{item.description}</h5>
+              </div>
+
+              <ul className="info-list">
+                <li className="info-item">
+                  <div className="info-icon category">
+                    <FontAwesomeIcon icon={faTag} />
+                  </div>
+                  <span className="info-label">Category</span>
+                  <span className="info-value">{item.category}</span>
+                </li>
+                <li className="info-item">
+                  <div className="info-icon location">
+                    <FontAwesomeIcon icon={faMapMarkerAlt} />
+                  </div>
+                  <span className="info-label">Location</span>
+                  <span className="info-value">{formatLocation(item.location)}</span>
+                </li>
+                <li className="info-item">
+                  <div className="info-icon date">
+                    <FontAwesomeIcon icon={faCalendarAlt} />
+                  </div>
+                  <span className="info-label">Date</span>
+                  <span className="info-value">
+                    {new Date(item.date).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Map Section */}
+          <div className="map-section">
+            <h5>Location on Map</h5>
+            <div style={{ width: "100%", margin: "0 auto" }}>
+              <APIProvider apiKey="AIzaSyAlx_vvH0P5fepk8bHpzO54syb5heCvJXI">
+                <Map 
+                  style={containerStyle} 
+                  center={mapCenter}
+                  zoom={15}
+                  mapId="DEMO_MAP_ID"
+                  gestureHandling={'greedy'}
+                  disableDefaultUI={false}
+                  zoomControl={true}
+                  streetViewControl={false}
+                  mapTypeControl={false}
+                >
+                  {/* Main marker */}
+                  <AdvancedMarker
+                    position={mapCenter}
+                    title={item.name}
+                  >
+                    <Pin
+                      background={'#4285F4'}
+                      borderColor={'#1967D2'}
+                      glyphColor={'#FFFFFF'}
                     />
-                </div>
-                
-                <div className="col-md-6">
-                  <h5 className="mt-md-0 mt-3">Description</h5>
-                  <p>{item.description}</p>
-                  
-                  <ul className="list-group list-group-flush">
-                    <li className="list-group-item d-flex align-items-center px-0">
-                      <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
-                      <strong className="me-2">Category:</strong> {item.category}
-                    </li>
-                    <li className="list-group-item d-flex align-items-center px-0">
-                      <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                      <strong className="me-2">Location:</strong> {formatLocation(item.location)}
-                    </li>
-                    <li className="list-group-item d-flex align-items-center px-0">
-                      <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
-                      <strong className="me-2">Date:</strong> {new Date(item.date).toLocaleDateString()}
-                    </li>
-                  </ul>
-                  
-                  {isOwner && !item.isResolved && (
-                    <div className="mt-3">
-                      <button 
-                        className="btn btn-success"
-                        onClick={() => openResolveDialog()}
-                      >
-                        <FontAwesomeIcon icon={faCheck} className="me-2" />
-                        Mark as Resolved
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </AdvancedMarker>
+
+                  {/* Custom marker with image */}
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      transform: 'translate(-50%, -100%)',
+                      left: '50%',
+                      top: '50%',
+                      padding: '2px',
+                      backgroundColor: 'white',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 7px 1px rgba(0,0,0,0.3)',
+                      width: '60px',
+                      height: '60px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      zIndex: 1000
+                    }}
+                  >
+                    {!imageError ? (
+                      <img
+                        src={processedImageUrl}
+                        alt={item.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          borderRadius: '6px',
+                        }}
+                        onError={() => {
+                          console.log('Marker image failed to load, using fallback');
+                          setImageError(true);
+                        }}
+                        crossOrigin="anonymous"
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: '#f0f0f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        color: '#666'
+                      }}>
+                        {item.name.substring(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                </Map>
+              </APIProvider>
             </div>
           </div>
         </div>
       </div>
-      {resolveDialogOpen && (
-        <div className="modal fade show" style={{ display: 'block' }} tabIndex={-1}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {selectedMatch ? 'Confirm Match' : 'Mark as Resolved'}
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setResolveDialogOpen(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                {selectedMatch ? (
-                  <p>
-                    Are you sure this is your item? This will mark your item as resolved.
-                  </p>
-                ) : (
-                  <p>
-                    Are you sure you want to mark this item as resolved?
-                  </p>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setResolveDialogOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-success"
-                  onClick={() => {
-                    const matchedId = selectedMatch ? 
-                      (selectedMatch.item1Id === itemId ? selectedMatch.item2Id : selectedMatch.item1Id) 
-                      : undefined;
-                    handleResolveItem(matchedId);
-                  }}
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="modal-backdrop fade show"></div>
-        </div>
-      )}
     </div>
   );
 };
