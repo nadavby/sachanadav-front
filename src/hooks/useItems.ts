@@ -149,3 +149,38 @@ export const useUserItems = (userId: string) => {
 
   return { items, error, isLoading, setItems, setError, setIsLoading };
 };
+
+export const useItem = (itemId: string | null) => {
+  const [item, setItem] = useState<Item | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!itemId) return;
+
+    console.log(`Fetching item with ID: ${itemId}`);
+    setIsLoading(true);
+    setError(null);
+
+    const { request, abort } = itemService.getItemById(itemId);
+
+    request
+      .then((res) => {
+        setItem(res.data);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (err instanceof CanceledError || err.code === "ERR_CANCELED") {
+          console.log("Request cancelled for item ID:", itemId);
+          return;
+        }
+        setError(err.message);
+        setIsLoading(false);
+        console.error("Error fetching item by ID:", err);
+      });
+
+    return () => abort();
+  }, [itemId]);
+
+  return { item, error, isLoading, setItem };
+};
