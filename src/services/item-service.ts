@@ -154,6 +154,7 @@ const updateItem = async (id: string, item: Partial<Item>, image?: File) => {
 
 const deleteItem = (id: string) => {
   const abortController = new AbortController();
+  console.log("Deleting item:", id);
   const request = apiClient.delete(`/items/${id}`, {
     signal: abortController.signal,
   });

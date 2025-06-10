@@ -4,6 +4,7 @@
 import { FC, useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useUserItems } from "../../hooks/useItems";
+import { useMatch,useMatchItems } from "../../hooks/useMatch";
 import { Item } from "../../services/item-service";
 import userService from "../../services/user-service";
 import itemService from "../../services/item-service";
@@ -16,7 +17,8 @@ import {
   faImage, 
   faMapMarkerAlt,
   faCalendarAlt,
-  faTag
+  faTag,
+  faHandshake // Nouvelle icône pour les matches
 } from "@fortawesome/free-solid-svg-icons";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,11 +55,48 @@ const UserProfile: FC = () => {
   const [localUser, setLocalUser] = useState<UserData | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [tempImageURL, setTempImageUrl] = useState<string | null>(null);
+  const [matchesWithItems, setMatchesWithItems] = useState<any[]>([]);
   const navigate = useNavigate();
   
   // Get user items
   const { items: Items, isLoading: itemsLoading, error: itemsError } = 
     useUserItems(currentUser?._id || "");
+
+  // Get user matches
+  const { matches, isLoading: matchesLoading, error: matchesError, fetchMatches } = useMatch();
+
+  // Get match items
+  const matchIds = matches.map(match => [match.item1Id, match.item2Id]).flat();
+  const { matchItems} = useMatchItems(matchIds);
+
+  // Fetch matches when component mounts
+  useEffect(() => {
+    if (currentUser?._id) {
+      fetchMatches();
+    }
+  }, [currentUser?._id, fetchMatches]);
+
+  // Update matches with items when matchItems change
+  useEffect(() => {
+    if (!matches.length || !matchItems.length) {
+      setMatchesWithItems([]);
+      return;
+    }
+    
+
+    const matchesWithDetails = matches.map(match => {
+      const item1 = matchItems.find(item => item._id === match.item1Id);
+      const item2 = matchItems.find(item => item._id === match.item2Id);
+
+      return {
+        ...match,
+        item1,
+        item2
+      };
+    });
+
+    setMatchesWithItems(matchesWithDetails);
+  }, [matches, matchItems]);
 
   // Transform items to match the expected structure
   const items = (Items as Item[]).map((item:Item) => ({
@@ -400,6 +439,137 @@ const UserProfile: FC = () => {
             </div>
           </div>
         </form>
+      </div>
+      
+      {/* Section Matches - Nouvelle section ajoutée */}
+      <div className="mt-4">
+        <h3>
+          <FontAwesomeIcon icon={faHandshake} className="me-2 text-success" />
+          My Matches
+        </h3>
+        {matchesLoading ? (
+          <p>Loading matches...</p>
+        ) : matchesError ? (
+          <p className="alert alert-danger">Error loading matches: {matchesError}</p>
+        ) : matchesWithItems.length === 0 ? (
+          <p className="alert alert-info">No matches found</p>
+        ) : (
+          <div className="row">
+            {matchesWithItems.map((match) => {
+              // Déterminer quel item appartient à l'utilisateur courant
+              const isUserItem1 = match.userId1 === currentUser?._id;
+              const userItem = isUserItem1 ? match.item1 : match.item2;
+              const otherItem = isUserItem1 ? match.item2 : match.item1;
+              const otherUserId = isUserItem1 ? match.userId2 : match.userId1;
+
+              return (
+                <div key={match._id} className="col-md-6 col-lg-4 mb-4">
+                  <div className="card shadow-sm h-100 border-success">
+                    <div className="card-header bg-success text-white">
+                      <h6 className="mb-0">
+                        <FontAwesomeIcon icon={faHandshake} className="me-2" />
+                        Match Found!
+                      </h6>
+                    </div>
+                    <div className="card-body">
+                      <p className="card-text">
+                        <strong>Match Score:</strong> 
+                        <span className="ms-2 badge bg-info">
+                          {Math.round(match.matchScore * 100)}%
+                        </span>
+                      </p>
+                      
+                      {/* Votre item */}
+                      <div className="mb-3">
+                        <small className="text-muted fw-bold">Your Item:</small>
+                        {userItem ? (
+                          <>
+                            <div className="d-flex align-items-center mb-2">
+                              {userItem.imageUrl && (
+                                <img 
+                                  src={userItem.imageUrl} 
+                                  alt={userItem.name} 
+                                  className="rounded me-2"
+                                  style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                                />
+                              )}
+                              <div>
+                                <p className="mb-0 fw-bold">{userItem.description}</p>
+                                <small className="text-muted">
+                                  <FontAwesomeIcon icon={faTag} className="me-1" />
+                                  {userItem.category}
+                                </small>
+                              </div>
+                            </div>
+                            <small className="text-muted">
+                              <FontAwesomeIcon icon={faMapMarkerAlt} className="me-1" />
+                              {formatLocation(userItem.location)}
+                            </small>
+                            <br />
+                            <small className="text-muted">
+                              <FontAwesomeIcon icon={faCalendarAlt} className="me-1" />
+                              {formatDate(userItem.date)}
+                            </small>
+                          </>
+                        ) : (
+                          <p className="text-muted">Item details not available</p>
+                        )}
+                      </div>
+
+                      <hr />
+
+                      {/* L'autre item */}
+                      <div className="mb-2">
+                        <small className="text-muted fw-bold">Matched Item:</small>
+                        {otherItem ? (
+                          <>
+                            <div className="d-flex align-items-center mb-2">
+                              {otherItem.imageUrl && (
+                                <img 
+                                  src={otherItem.imageUrl} 
+                                  alt={otherItem.name} 
+                                  className="rounded me-2"
+                                  style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                                />
+                              )}
+                              <div>
+                                <p className="mb-0 fw-bold">{otherItem.description}</p>
+                                <small className="text-muted">
+                                  <FontAwesomeIcon icon={faTag} className="me-1" />
+                                  {otherItem.category}
+                                </small>
+                              </div>
+                            </div>
+                            <small className="text-muted">
+                              <FontAwesomeIcon icon={faMapMarkerAlt} className="me-1" />
+                              {formatLocation(otherItem.location)}
+                            </small>
+                            <br />
+                            <small className="text-muted">
+                              <FontAwesomeIcon icon={faCalendarAlt} className="me-1" />
+                              {formatDate(otherItem.date)}
+                            </small>
+                            <br />
+                            <small className="text-muted">
+                              Owner: {otherItem.ownerName || otherItem.ownerEmail}
+                            </small>
+                          </>
+                        ) : (
+                          <p className="text-muted">Item details not available</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="card-footer bg-transparent">
+                      <small className="text-muted">
+                        Match created: {formatDate(match.createdAt)}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       
       <div className="mt-4">
