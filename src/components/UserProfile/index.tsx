@@ -7,7 +7,7 @@ import { useUserItems } from "../../hooks/useItems";
 import { useMatch } from "../../hooks/useMatch";
 import { useMatchItems } from "../../hooks/useMatch";
 import { Item } from "../../services/item-service";
-import userService from "../../services/user-service";
+import userService, { IUser } from "../../services/user-service";
 import itemService from "../../services/item-service";
 import defaultAvatar from "../../assets/avatar.png";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -23,7 +23,10 @@ import {
   faExchangeAlt,
   faCheckCircle,
   faSearch,
-  faHandHoldingHeart
+  faHandHoldingHeart,
+  faEdit,
+  faTrash,
+  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -131,6 +134,7 @@ const UserProfile: FC = () => {
     formState: { errors },
     setValue,
     watch,
+    reset
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -158,6 +162,19 @@ const UserProfile: FC = () => {
     }
   }, [currentUser]);
 
+  // Add this new effect to update form values when localUser changes or editing mode is enabled
+  useEffect(() => {
+    if (localUser && isEditing) {
+      reset({
+        email: localUser.email,
+        userName: localUser.userName,
+        password: "",
+        phoneNumber: localUser.phoneNumber || "",
+        profileImage: undefined
+      });
+    }
+  }, [localUser, isEditing, reset]);
+
   useEffect(() => {
     if (watchProfileImage && watchProfileImage.length > 0) {
       const file = watchProfileImage[0];
@@ -175,12 +192,10 @@ const UserProfile: FC = () => {
   }, [watchProfileImage]);
 
   const onSubmit: SubmitHandler<ProfileFormData> = async (data) => {
-    if (!localUser || !localUser._id) return;
-    
-    setIsUploading(true);
-    
     try {
-      const updatedUserData: Partial<UserData> = {
+      setIsUploading(true);
+      
+      const updatedUserData: Partial<IUser> = {
         email: data.email,
         userName: data.userName,
         phoneNumber: data.phoneNumber
@@ -191,39 +206,33 @@ const UserProfile: FC = () => {
       }
 
       if (selectedImage) {
-        const formData = new FormData();
-        formData.append("image", selectedImage);
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData
+        try {
+          const imageResponse = await userService.uploadImage(selectedImage);
+          updatedUserData.imgURL = imageResponse.data.url;
+        } catch (error) {
+          console.error("Failed to upload image:", error);
+          throw new Error("Failed to upload profile image");
+        }
+      }
+      
+      try {
+        const { request } = userService.updateUser(localUser._id, updatedUserData);
+        const updatedUser = await request;
+        
+        setLocalUser({
+          ...localUser,
+          ...updatedUser.data
         });
-        const imageData = await response.json();
-        updatedUserData.imgURL = imageData.url;
+        
+        setSelectedImage(null);
+        setTempImageUrl(null);
+        setIsEditing(false);
+        
+        await updateAuthState();
+      } catch (error) {
+        console.error("Failed to update user:", error);
+        throw new Error("Failed to update user details");
       }
-      
-      const response = await fetch(`/api/users/${localUser._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(updatedUserData)
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to update user");
-      }
-      
-      const updatedUser = await response.json();
-      setLocalUser({
-        ...localUser,
-        ...updatedUserData,
-        imgURL: updatedUserData.imgURL || localUser.imgURL
-      });
-      setSelectedImage(null);
-      setTempImageUrl(null);
-      setIsEditing(false);
-      
-      await updateAuthState();
     } catch (error) {
       console.error("Failed to update user details:", error);
     } finally {
@@ -302,172 +311,191 @@ const UserProfile: FC = () => {
   const { ref: profileImageRef, ...profileImageRest } = register("profileImage");
 
   return (
-    <div className="container mt-4">
-      <button
-        className="btn btn-outline-primary mb-3"
-        onClick={() => navigate(-1)}>
-        <FontAwesomeIcon icon={faArrowLeft} className="me-2" />
-        Back
-      </button>
+    <div className="profile-container">
+      {!isAuthenticated && !loading && <Navigate to="/login" />}
       
-      {/* Profile Card */}
-  <div className="card p-4">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="row align-items-center text-center text-md-start">
-            <div className="col-md-3 text-center position-relative">
-              <img
-                src={tempImageURL || localUser.imgURL || defaultAvatar}
-                alt="Profile"
-                className="rounded-circle img-thumbnail"
-                style={{ width: "150px", height: "150px", objectFit: "cover" }}
-              />
-              
-              {isEditing && (
-                <div className="position-absolute bottom-0 end-0" style={{ marginRight: "30%" }}>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-secondary rounded-circle"
-                    onClick={() => document.getElementById("profileImageInput")?.click()}
-                  >
-                    <FontAwesomeIcon icon={faImage} />
-                  </button>
-                  <input
-                    id="profileImageInput"
-                    {...profileImageRest}
-                    ref={(e) => {
-                      profileImageRef(e);
-                    }}
-                    type="file"
-                    className="d-none"
-                    accept="image/jpeg,image/png"
-                    disabled={!isEditing}
-                  />
-                </div>
-              )}
-              
-              {isUploading && <p className="text-primary mt-2">Uploading...</p>}
-            </div>
-            
-            <div className="col-md-9">
-              {!isEditing ? (
-                <>
-                  <p>
-                    <strong>Username:</strong> {localUser.userName || "Not set"}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {localUser.email}
-                  </p>
-                  <p>
-                    <strong>Password:</strong> ********
-                  </p>
-                  <p>
-                    <strong>Phone Number:</strong> {localUser.phoneNumber ? formatPhoneNumber(localUser.phoneNumber) : "Not set"}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="btn btn-primary me-2">
-                    Edit Profile
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteAccount}
-                    className="btn btn-danger">
-                    Delete Account
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="btn btn-secondary ms-2">
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3">
-                    <label htmlFor="userName" className="form-label">Username:</label>
-                    <input
-                      id="userName"
-                      {...register("userName")}
-                      type="text"
-                      className={`form-control ${errors.userName ? "is-invalid" : ""}`}
-                    />
-                    {errors.userName && (
-                      <div className="invalid-feedback">{errors.userName.message}</div>
-                    )}
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="email" className="form-label">Email:</label>
-                    <input
-                      id="email"
-                      {...register("email")}
-                      type="email"
-                      className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                    />
-                    {errors.email && (
-                      <div className="invalid-feedback">{errors.email.message}</div>
-                    )}
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label">New Password:</label>
-                    <input
-                      id="password"
-                      {...register("password")}
-                      type="password"
-                      className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                      placeholder="Enter new password"
-                    />
-                    {errors.password && (
-                      <div className="invalid-feedback">{errors.password.message}</div>
-                    )}
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label htmlFor="phoneNumber" className="form-label">Phone Number:</label>
-                    <input
-                      id="phoneNumber"
-                      {...register("phoneNumber")}
-                      type="tel"
-                      className={`form-control ${errors.phoneNumber ? "is-invalid" : ""}`}
-                    />
-                    {errors.phoneNumber && (
-                      <div className="invalid-feedback">{errors.phoneNumber.message}</div>
-                    )}
-                  </div>
+      {/* Profile Section */}
+      <div className="section-card">
+        <div className="section-header">
+          <h2 className="section-title">Profile Details</h2>
+        </div>
 
-                  <button
-                    type="submit"
-                    className="btn btn-success me-2"
-                    disabled={isUploading}>
-                    Save Changes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    className="btn btn-secondary">
-                    Cancel
-                  </button>
-                </>
-              )}
+        {!isEditing ? (
+          <div className="user-data-container">
+            <div className="profile-picture-container">
+              <img
+                src={localUser?.imgURL || defaultAvatar}
+                alt="Profile"
+                className="profile-picture cursor-pointer"
+                onClick={() => setIsEditing(true)}
+                style={{
+                  cursor: "pointer",
+                  transition: "opacity 0.2s ease-in-out"
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.opacity = "0.8";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              />
+            </div>
+
+            <div className="user-data-field">
+              <span className="user-data-label">Username</span>
+              <span className="user-data-value">{localUser?.userName}</span>
+            </div>
+            <div className="user-data-field">
+              <span className="user-data-label">Email</span>
+              <span className="user-data-value">{localUser?.email}</span>
+            </div>
+            {localUser?.phoneNumber && (
+              <div className="user-data-field">
+                <span className="user-data-label">Phone</span>
+                <span className="user-data-value">{formatPhoneNumber(localUser.phoneNumber)}</span>
+              </div>
+            )}
+            <div className="action-buttons">
+              <button 
+                className="btn btn-primary"
+                onClick={() => setIsEditing(true)}
+              >
+                <FontAwesomeIcon icon={faImage} />
+                Edit Profile
+              </button>
+              <button 
+                className="btn btn-outline"
+                onClick={handleLogout}
+              >
+                <FontAwesomeIcon icon={faArrowLeft} />
+                Logout
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleDeleteAccount}
+              >
+                <FontAwesomeIcon icon={faHandshake} />
+                Delete Account
+              </button>
             </div>
           </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="user-data-container">
+            <div className="profile-picture-container">
+              <img
+                src={tempImageURL || localUser?.imgURL || defaultAvatar}
+                alt="Profile"
+                className="profile-picture cursor-pointer"
+                onClick={() => document.getElementById('profileImageInput')?.click()}
+                style={{
+                  cursor: "pointer",
+                  transition: "opacity 0.2s ease-in-out"
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.opacity = "0.8";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+              />
+              <input
+                id="profileImageInput"
+                type="file"
+                className="d-none"
+                accept="image/*"
+                {...register("profileImage")}
+              />
+            </div>
+
+            <div className="user-data-field">
+              <label className="user-data-label">Username</label>
+              <input
+                type="text"
+                className="form-input"
+                {...register("userName")}
+              />
+              {errors.userName && (
+                <span className="error-message">{errors.userName.message}</span>
+              )}
+            </div>
+            
+            <div className="user-data-field">
+              <label className="user-data-label">Email</label>
+              <input
+                type="email"
+                className="form-input"
+                {...register("email")}
+              />
+              {errors.email && (
+                <span className="error-message">{errors.email.message}</span>
+              )}
+            </div>
+            
+            <div className="user-data-field">
+              <label className="user-data-label">Phone</label>
+              <input
+                type="tel"
+                className="form-input"
+                {...register("phoneNumber")}
+              />
+              {errors.phoneNumber && (
+                <span className="error-message">{errors.phoneNumber.message}</span>
+              )}
+            </div>
+            
+            <div className="user-data-field">
+              <label className="user-data-label">Password</label>
+              <input
+                type="password"
+                className="form-input"
+                {...register("password")}
+                placeholder="Leave blank to keep current password"
+              />
+              {errors.password && (
+                <span className="error-message">{errors.password.message}</span>
+              )}
+            </div>
+
+            <div className="action-buttons">
+              <button 
+                type="submit" 
+                className="btn btn-primary"
+                disabled={isUploading}
+              >
+                <FontAwesomeIcon icon={faCheckCircle} />
+                {isUploading ? "Updating..." : "Save Changes"}
+              </button>
+              <button 
+                type="button"
+                className="btn btn-outline"
+                onClick={handleCancelEdit}
+              >
+                <FontAwesomeIcon icon={faArrowLeft} />
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
-      {/* My Matches Section */}
-      <div className="section-card mb-5">
+      {/* Matches Section */}
+      <div className="section-card">
         <div className="section-header">
-          <h2 className="section-title">
-            <FontAwesomeIcon icon={faHandshake} />
-            <span>My Matches</span>
-          </h2>
+          <h2 className="section-title">My Matches</h2>
         </div>
-        <div className="row g-4">
-          {matchesWithItems.map((match) => (
-            <div key={match._id} className="col-md-6 col-lg-4">
-              <div className="match-card">
+        
+        {matchesLoading ? (
+          <div className="text-center">Loading matches...</div>
+        ) : matchesError ? (
+          <div className="error-message">Error loading matches</div>
+        ) : matchesWithItems.length === 0 ? (
+          <div className="empty-state">
+            <p>No matches found yet</p>
+          </div>
+        ) : (
+          <div className="matches-grid">
+            {matchesWithItems.map((match) => (
+              <div key={match._id} className="match-card">
                 <div className="match-items">
                   <div className="match-item">
                     <div className="match-item-image-container">
@@ -509,17 +537,9 @@ const UserProfile: FC = () => {
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
-          {matchesWithItems.length === 0 && (
-            <div className="col-12">
-              <div className="text-center py-5">
-                <FontAwesomeIcon icon={faSearch} className="display-1 text-muted mb-4" />
-                <p className="h4 text-muted">No matches found</p>
-              </div>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* My Lost Items Section */}

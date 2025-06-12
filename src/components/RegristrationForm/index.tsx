@@ -52,39 +52,56 @@ export const RegistrationForm: FC = () => {
   }, [phoneValue, setValue]);
 
   const onSubmit = async (data: formData) => {
-    console.log(data);
+    console.log("Form data:", data);
     setServerError(null);
 
     try {
-      const res = await userService.uploadImage(file as File);
-      console.log(res.data);
       const user: IUser = {
         email: data.email,
         userName: data.userName,
         password: data.password,
-        imgURL: res.data.url,
         phoneNumber: data.phoneNumber,
       };
 
-      const registerRes = await userService.register(user);
-      console.log(registerRes);
-      navigate("/login");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      console.error(error);
-      if (error.response) {
-        if (typeof error.response.data === 'string') {
-          setServerError(error.response.data);
-        } else if (error.response.data && error.response.data.message) {
-          setServerError(error.response.data.message);
-        } else {
-          setServerError(`Registration failed (${error.response.status}). Please try again.`);
+      // Upload image first if exists
+      if (file) {
+        try {
+          const imageResponse = await userService.uploadImage(file);
+          if (imageResponse.data && imageResponse.data.url) {
+            user.imgURL = imageResponse.data.url;
+          }
+        } catch (error) {
+          console.error("Image upload failed:", error);
+          setServerError("Failed to upload profile image. Please try again.");
+          return;
         }
-      } else if (error.message) {
-        setServerError(error.message);
-      } else {
-        setServerError("An error occurred during registration. Please try again.");
       }
+
+      console.log("Registering user:", { ...user, password: '[REDACTED]' });
+      
+      try {
+        const registerRes = await userService.register(user);
+        console.log("Registration successful:", registerRes);
+        navigate("/login");
+      } catch (error: any) {
+        console.error("Registration failed:", error);
+        if (error.response) {
+          if (typeof error.response.data === 'string') {
+            setServerError(error.response.data);
+          } else if (error.response.data && error.response.data.message) {
+            setServerError(error.response.data.message);
+          } else {
+            setServerError(`Registration failed (${error.response.status}). Please try again.`);
+          }
+        } else if (error.message) {
+          setServerError(error.message);
+        } else {
+          setServerError("An error occurred during registration. Please try again.");
+        }
+      }
+    } catch (error: any) {
+      console.error("Unexpected error:", error);
+      setServerError("An unexpected error occurred. Please try again.");
     }
   };
 
@@ -109,24 +126,24 @@ export const RegistrationForm: FC = () => {
                   <img
                     src={file ? URL.createObjectURL(file) : avatar}
                     alt="Profile"
-                    className="rounded-circle"
+                    className="rounded-circle cursor-pointer"
                     style={{
                       width: "150px",
                       height: "150px",
                       objectFit: "cover",
+                      cursor: "pointer",
+                      transition: "opacity 0.2s ease-in-out"
+                    }}
+                    onClick={() => {
+                      inputFileRef.current?.click();
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.opacity = "0.8";
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.opacity = "1";
                     }}
                   />
-                  <div className="position-absolute bottom-0 end-0" style={{ marginRight: "30%" }}>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-secondary rounded-circle"
-                      onClick={() => {
-                        inputFileRef.current?.click();
-                      }}
-                    >
-                      <FontAwesomeIcon icon={faImage} />
-                    </button>
-                  </div>
                   <input
                     {...rest}
                     ref={(e) => {
@@ -203,8 +220,6 @@ export const RegistrationForm: FC = () => {
                       value={phoneValue}
                       onChange={setPhoneValue}
                       id="phoneNumber"
-                      useNationalFormatForDefaultCountry={true}
-                      displayInitialValueAsLocalNumber={true}
                     />
                   </div>
                   {errors.phoneNumber && (

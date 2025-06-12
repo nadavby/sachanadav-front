@@ -51,7 +51,7 @@ const App: FC = () => {
             element={<UserProfile />}
           />
           <Route
-            path="/upload-item"
+            path="/report-item"
             element={<ItemUpload />}
           />
           <Route
