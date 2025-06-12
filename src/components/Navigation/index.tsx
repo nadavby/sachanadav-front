@@ -195,12 +195,12 @@ const Navigation: FC = () => {
                 </li>
                 <li className="nav-item">
                   <Link
-                    to="/upload-item"
-                    className={`nav-link ${location.pathname === '/upload-item' ? 'active' : ''}`}
+                    to="/report-item"
+                    className={`nav-link ${location.pathname === '/report-item' ? 'active' : ''}`}
                     onClick={closeMenu}
                   >
                     <FontAwesomeIcon icon={faUpload} className="me-2" />
-                    Upload Item
+                    Report Item
                   </Link>
                 </li>
                 <li className="nav-item">

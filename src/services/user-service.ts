@@ -54,8 +54,20 @@ const getCurrentUser = async () => {
 const register = async (user: IUser) => {
   const abortController = new AbortController();
   try {
+    console.log("Sending registration request with data:", { 
+      ...user, 
+      password: '[REDACTED]',
+      imgURL: user.imgURL 
+    });
+    
     const { data } = await apiClient.post<IUser>("/auth/register", user, {
       signal: abortController.signal,
+    });
+
+    console.log("Registration response:", { 
+      ...data, 
+      password: '[REDACTED]',
+      imgURL: data.imgURL 
     });
 
     if (data.accessToken && data.refreshToken) {
@@ -98,13 +110,22 @@ const uploadImage = async (img: File | null) => {
     formData.append("file", img);
   }
 
-  return apiClient.post(
-    "/file?file=" + (img?.name || "default.png"),
-    formData,
-    {
-      headers: { "Content-Type": "image/*" },
-    }
-  );
+  try {
+    const response = await apiClient.post(
+      "/file?file=" + (img?.name || "default.png"),
+      formData,
+      {
+        headers: { 
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    console.log("Image upload service response:", response.data);
+    return response;
+  } catch (error) {
+    console.error("Image upload service error:", error);
+    throw error;
+  }
 };
 
 const login = async (email: string, password: string) => {
