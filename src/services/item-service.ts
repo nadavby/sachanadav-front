@@ -27,6 +27,44 @@ export interface Item {
   matchedId?: string;
   createdAt?: string;
   updatedAt?: string;
+  colors?: string[];
+  brand?: string;
+  condition?: string;
+  flaws?: string;
+  material?: string;
+  visionApiData?: {
+    labels?: string[];
+    objects?: Array<{
+      name: string;
+      score: number;
+      boundingBox?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }
+    }>;
+    texts?: Array<{
+      text: string;
+      confidence?: number;
+      boundingBox?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }
+    }>;
+    logos?: Array<{
+      description: string;
+      score: number;
+      boundingBox?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }
+    }>;
+  };
 }
 
 const getAllItems = (filters?: {
@@ -160,6 +198,14 @@ const deleteItem = (id: string) => {
   return { request, abort: () => abortController.abort() };
 };
 
+const resolveItem = (id: string) => {
+  const abortController = new AbortController();
+  const request = apiClient.put(`/items/${id}/resolve`, null, {
+    signal: abortController.signal,
+  });
+  return { request, abort: () => abortController.abort() };
+};
+
 export default {
   getAllItems,
   getAllLostItems,
@@ -169,4 +215,5 @@ export default {
   addItem,
   updateItem,
   deleteItem,
+  resolveItem,
 };

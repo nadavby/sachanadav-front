@@ -88,7 +88,6 @@ const ItemUpload: FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedItemName, setUploadedItemName] = useState<string | null>(null);
   const [otherCategory, setOtherCategory] = useState<string>("");
   const [mapInitialized, setMapInitialized] = useState(false);
   const [locationError, setLocationError] = useState<string | null>("Please select a location");
@@ -220,7 +219,6 @@ const ItemUpload: FC = () => {
         colorSelections: newColors
       }));
     }
-    // Reset the select to show placeholder
     e.target.value = "";
   };
   
@@ -261,16 +259,6 @@ const ItemUpload: FC = () => {
         [name]: value
       }));
     }
-  };
-
-  const handleOtherCategoryChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setOtherCategory(value);
-    setFormData(prev => ({
-      ...prev,
-      itemType: "other",
-      customItemType: value || "Other"
-    }));
   };
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -324,7 +312,7 @@ const ItemUpload: FC = () => {
         submitData.append('image', uploadedImage);
       }
       
-      const response = await itemService.addItem(submitData);
+      await itemService.addItem(submitData);
 
 
           navigate('/profile');

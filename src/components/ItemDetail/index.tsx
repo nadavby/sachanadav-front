@@ -38,15 +38,15 @@ const ItemDetail: React.FC = () => {
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mapCenter, setMapCenter] = useState(defaultCenter);
+  const [itemPosition, setItemPosition] = useState(defaultCenter);
   const [imageError, setImageError] = useState(false);
 
-  const updateMapCenter = useCallback((itemData: any) => {
+  const updateItemPosition = useCallback((itemData: any) => {
     if (itemData?.location?.lat && itemData?.location?.lng) {
       const lat = typeof itemData.location.lat === 'string' ? parseFloat(itemData.location.lat) : itemData.location.lat;
       const lng = typeof itemData.location.lng === 'string' ? parseFloat(itemData.location.lng) : itemData.location.lng;
-      console.log('Updating map center:', { lat, lng });
-      setMapCenter({ lat, lng });
+      console.log('Updating item position:', { lat, lng });
+      setItemPosition({ lat, lng });
     } else {
       console.log('No valid location data in item:', itemData?.location);
     }
@@ -94,7 +94,7 @@ const ItemDetail: React.FC = () => {
         console.log('Location from item:', itemData.location);
         
         setItem(itemData);
-        updateMapCenter(itemData);
+        updateItemPosition(itemData);
       } catch (error) {
         console.error('Error fetching item:', error);
         setError('Failed to load item details');
@@ -104,17 +104,17 @@ const ItemDetail: React.FC = () => {
     };
 
     fetchItem();
-  }, [itemId, updateMapCenter]);
+  }, [itemId, updateItemPosition]);
 
   // Log state changes
   useEffect(() => {
     console.log('State updated:', {
       loading,
       hasItem: !!item,
-      mapCenter,
+      itemPosition,
       itemLocation: item?.location
     });
-  }, [loading, item, mapCenter]);
+  }, [loading, item, itemPosition]);
 
   const formatLocation = (location: any): string => {
     if (!location) return "Unknown location";
@@ -233,8 +233,8 @@ const ItemDetail: React.FC = () => {
               <APIProvider apiKey="AIzaSyAlx_vvH0P5fepk8bHpzO54syb5heCvJXI">
                 <Map 
                   style={containerStyle} 
-                  center={mapCenter}
-                  zoom={15}
+                  defaultCenter={itemPosition}
+                  defaultZoom={15}
                   mapId="DEMO_MAP_ID"
                   gestureHandling={'greedy'}
                   disableDefaultUI={false}
@@ -242,25 +242,12 @@ const ItemDetail: React.FC = () => {
                   streetViewControl={false}
                   mapTypeControl={false}
                 >
-                  {/* Main marker */}
+                  {/* Item marker */}
                   <AdvancedMarker
-                    position={mapCenter}
+                    position={itemPosition}
                     title={item.name}
                   >
-                    <Pin
-                      background={'#4285F4'}
-                      borderColor={'#1967D2'}
-                      glyphColor={'#FFFFFF'}
-                    />
-                  </AdvancedMarker>
-
-                  {/* Custom marker with image */}
-                  <div 
-                    style={{
-                      position: 'absolute',
-                      transform: 'translate(-50%, -100%)',
-                      left: '50%',
-                      top: '50%',
+                    <div style={{
                       padding: '2px',
                       backgroundColor: 'white',
                       borderRadius: '8px',
@@ -270,10 +257,8 @@ const ItemDetail: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      overflow: 'hidden',
-                      zIndex: 1000
-                    }}
-                  >
+                      overflow: 'hidden'
+                    }}>
                     {!imageError ? (
                       <img
                         src={processedImageUrl}
@@ -305,6 +290,7 @@ const ItemDetail: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  </AdvancedMarker>
                 </Map>
               </APIProvider>
             </div>

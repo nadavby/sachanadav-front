@@ -17,15 +17,68 @@
 .chat-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 1rem;
   border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
+}
+
+.chat-header-content {
+  flex: 1;
 }
 
 .chat-header h3 {
   margin: 0;
   font-size: 1.2rem;
   color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.matched-items {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.matched-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.matched-item-thumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
+}
+
+.matched-item-label {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.resolved-badge {
+  font-size: 0.75rem;
+  color: #198754;
+  background-color: #d1e7dd;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-top: 0.25rem;
+  display: inline-block;
+}
+
+.confirmed-badge {
+  font-size: 0.75rem;
+  color: #0d6efd;
+  background-color: #cfe2ff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-top: 0.25rem;
+  display: inline-block;
 }
 
 .chat-actions {
@@ -78,6 +131,7 @@
   text-align: center;
   color: #666;
   margin: auto;
+  font-size: 0.9rem;
 }
 
 .message {
@@ -89,13 +143,13 @@
 
 .message.sent {
   align-self: flex-end;
-  background-color: #007bff;
+  background-color: #0d6efd;
   color: white;
 }
 
 .message.received {
   align-self: flex-start;
-  background-color: #f0f0f0;
+  background-color: #f0f2f5;
   color: #333;
 }
 
@@ -104,16 +158,9 @@
   word-wrap: break-word;
 }
 
-.message-meta {
+.message-timestamp {
   font-size: 0.75rem;
   opacity: 0.8;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.message-status {
-  margin-left: 0.5rem;
 }
 
 .message-input {
@@ -133,24 +180,30 @@
 }
 
 .message-input input:focus {
-  border-color: #007bff;
+  border-color: #0d6efd;
+}
+
+.message-input input:disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
 }
 
 .message-input button {
   padding: 0.5rem 1.5rem;
-  background-color: #007bff;
+  background-color: #0d6efd;
   color: white;
   border: none;
   border-radius: 1.5rem;
   cursor: pointer;
-  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.message-input button:hover:not(:disabled) {
+  background-color: #0b5ed7;
 }
 
 .message-input button:disabled {
-  background-color: #ccc;
+  background-color: #e9ecef;
   cursor: not-allowed;
-}
-
-.message-input button:not(:disabled):hover {
-  background-color: #0056b3;
 } 

@@ -1,50 +1,62 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useUserItems } from "../../hooks/useItems";
+import { useMatch } from "../../hooks/useMatch";
+import { useMatchItems } from "../../hooks/useMatchItems";
 import { Item } from "../../services/item-service";
 import userService from "../../services/user-service";
 import itemService from "../../services/item-service";
 import defaultAvatar from "../../assets/avatar.png";
 import { Navigate, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { isValidPhoneNumber, formatPhoneNumber } from 'react-phone-number-input';
+import { isValidPhoneNumber, formatPhoneNumber } from "../../utils/phoneUtils";
 import { 
   faArrowLeft, 
   faImage, 
   faMapMarkerAlt,
   faCalendarAlt,
-  faTag
+  faTag,
+  faHandshake,
+  faExchangeAlt,
+  faCheckCircle,
+  faSearch,
+  faHandHoldingHeart
 } from "@fortawesome/free-solid-svg-icons";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
+import "./styles.css";
+
+interface Location {
+  lat: number;
+  lng: number;
+}
+
+interface UserData {
+  _id: string;
+  email: string;
+  userName: string;
+  phoneNumber?: string;
+  imgURL?: string;
+  password?: string;
+  accessToken?: string;
+  refreshToken?: string;
+}
 
 const profileFormSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   userName: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
   phoneNumber: z.string().refine((val) => {
-    // Check if the phone number is valid using the library's validation
-    return isValidPhoneNumber(val) || val === '';
-  }, "Please enter a valid phone number"),
-  profileImage: z.optional(z.instanceof(FileList))
+    return !val || isValidPhoneNumber(val);
+  }, "Please enter a valid phone number").optional(),
+  profileImage: z.instanceof(FileList).optional()
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
-
-interface UserData {
-  _id?: string;
-  email: string;
-  userName: string;
-  password?: string;
-  phoneNumber?: string;
-  imgURL?: string;
-  accessToken?: string;
-  refreshToken?: string;
-}
 
 const UserProfile: FC = () => {
   const { currentUser, updateAuthState, isAuthenticated, loading } = useAuth();
@@ -53,11 +65,43 @@ const UserProfile: FC = () => {
   const [localUser, setLocalUser] = useState<UserData | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [tempImageURL, setTempImageUrl] = useState<string | null>(null);
+  const [matchesWithItems, setMatchesWithItems] = useState<any[]>([]);
   const navigate = useNavigate();
   
   // Get user items
   const { items: Items, isLoading: itemsLoading, error: itemsError } = 
     useUserItems(currentUser?._id || "");
+
+  // Get user matches
+  const { matches, isLoading: matchesLoading, error: matchesError } = useMatch();
+
+  // Get match items
+  const matchIds = useMemo(() => {
+    return matches.map(match => [match.item1Id, match.item2Id]).flat();
+  }, [matches]);
+  
+  const { matchItems } = useMatchItems(matchIds);
+
+  // Update matches with items when matchItems change
+  useEffect(() => {
+    if (!matches.length || !matchItems.length) {
+      setMatchesWithItems([]);
+      return;
+    }
+    
+    const matchesWithDetails = matches.map(match => {
+      const item1 = matchItems.find(item => item._id === match.item1Id);
+      const item2 = matchItems.find(item => item._id === match.item2Id);
+
+      return {
+        ...match,
+        item1,
+        item2
+      };
+    });
+
+    setMatchesWithItems(matchesWithDetails);
+  }, [matches, matchItems]);
 
   // Transform items to match the expected structure
   const items = (Items as Item[]).map((item:Item) => ({
@@ -90,10 +134,10 @@ const UserProfile: FC = () => {
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      email: "",
-      userName: "",
+      email: currentUser?.email || "",
+      userName: currentUser?.userName || "",
       password: "",
-      phoneNumber: ""
+      phoneNumber: currentUser?.phoneNumber || ""
     }
   });
 
@@ -101,13 +145,18 @@ const UserProfile: FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-      setLocalUser({ ...currentUser });
-      setValue("email", currentUser.email);
-      setValue("userName", currentUser.userName || "");
-      setValue("password", ""); 
-      setValue("phoneNumber", currentUser.phoneNumber || "");
+      setLocalUser({
+        _id: currentUser._id || "",
+        email: currentUser.email || "",
+        userName: currentUser.userName || "",
+        phoneNumber: currentUser.phoneNumber,
+        imgURL: currentUser.imgURL,
+        password: currentUser.password,
+        accessToken: currentUser.accessToken,
+        refreshToken: currentUser.refreshToken
+      });
     }
-  }, [currentUser, setValue]);
+  }, [currentUser]);
 
   useEffect(() => {
     if (watchProfileImage && watchProfileImage.length > 0) {
@@ -125,7 +174,7 @@ const UserProfile: FC = () => {
     }
   }, [watchProfileImage]);
 
-  const onSubmit = async (data: ProfileFormData) => {
+  const onSubmit: SubmitHandler<ProfileFormData> = async (data) => {
     if (!localUser || !localUser._id) return;
     
     setIsUploading(true);
@@ -137,23 +186,34 @@ const UserProfile: FC = () => {
         phoneNumber: data.phoneNumber
       };
       
-      if (data.password && data.password.length >= 8) {
+      if (data.password) {
         updatedUserData.password = data.password;
       }
 
-      if (data.phoneNumber && isValidPhoneNumber(data.phoneNumber)) {
-        updatedUserData.phoneNumber = data.phoneNumber;
-      }
-      
       if (selectedImage) {
-        const { data: imageData } = await userService.uploadImage(selectedImage);
+        const formData = new FormData();
+        formData.append("image", selectedImage);
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData
+        });
+        const imageData = await response.json();
         updatedUserData.imgURL = imageData.url;
       }
       
-      const { request } = userService.updateUser(localUser._id, updatedUserData);
-      const response = await request;
-      const updatedUser = response.data;
-      console.log("User updated:", updatedUser);
+      const response = await fetch(`/api/users/${localUser._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(updatedUserData)
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update user");
+      }
+      
+      const updatedUser = await response.json();
       setLocalUser({
         ...localUser,
         ...updatedUserData,
@@ -229,18 +289,11 @@ const UserProfile: FC = () => {
     }
   };
 
-  const formatLocation = (location: any): string => {
-    if (!location) return "Unknown location";
-    
-    if (typeof location === 'string') return location;
-    
-    if (location && typeof location === 'object') {
-      if (location.lat !== undefined && location.lng !== undefined) {
-        return `Lat: ${location.lat.toFixed(4)}, Lng: ${location.lng.toFixed(4)}`;
-      }
+  const formatLocation = (location: string | Location): string => {
+    if (typeof location === 'string') {
+      return location;
     }
-    
-    return String(location);
+    return `${location.lat}, ${location.lng}`;
   };
 
   if (!loading && !isAuthenticated) return <Navigate to="/login" />;
@@ -257,7 +310,8 @@ const UserProfile: FC = () => {
         Back
       </button>
       
-      <div className="card p-4">
+      {/* Profile Card */}
+  <div className="card p-4">
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="row align-items-center text-center text-md-start">
             <div className="col-md-3 text-center position-relative">
@@ -401,133 +455,197 @@ const UserProfile: FC = () => {
           </div>
         </form>
       </div>
-      
-      <div className="mt-4">
-        <h3>My Lost Items</h3>
-        {itemsLoading ? (
-          <p>Loading items...</p>
-        ) : itemsError ? (
-          <p className="alert alert-danger">Error loading items: {itemsError}</p>
-        ) : lostItems.length === 0 ? (
-          <p className="alert alert-info">No lost items reported</p>
-        ) : (
-          <div className="row">
-            {lostItems.map((item: Item) => (
-              <div key={item._id} className="col-md-6 col-lg-4 mb-4">
-                <div className="card shadow-sm h-100">
-                  {item.imageUrl && (
-                    <img 
-                      src={item.imageUrl} 
-                      className="card-img-top" 
-                      alt={item.name}
-                      style={{ height: "200px", objectFit: "cover" }}
-                    />
-                  )}
-                  <div className="card-body d-flex flex-column">
-                    <h5 className="card-text">{item.description}</h5>
-                    <div className="mt-auto">
-                      <p className="card-text mb-1">
-                        <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
-                        {item.category}
-                      </p>
-                      <p className="card-text mb-1">
-                        <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                        {formatLocation(item.location)}
-                      </p>
-                      <p className="card-text">
-                        <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
-                        {formatDate(item.date)}
-                      </p>
+
+      {/* My Matches Section */}
+      <div className="section-card mb-5">
+        <div className="section-header">
+          <h2 className="section-title">
+            <FontAwesomeIcon icon={faHandshake} className="me-2" />
+            My Matches
+          </h2>
+        </div>
+        <div className="row g-4">
+          {matchesWithItems.map((match) => (
+            <div key={match._id} className="col-md-6 col-lg-4">
+              <div className="match-card">
+                <div className="match-items">
+                  <div className="match-item">
+                    <div className="match-item-image-container">
+                      <img
+                        src={match.item1?.imageUrl}
+                        alt={match.item1?.name}
+                        className="match-item-image"
+                      />
+                    </div>
+                    <div className="match-item-details">
+                      <h5>{match.item1?.name}</h5>
+                      <p className="text-muted small">{match.item1?.category}</p>
                     </div>
                   </div>
-                  <div className="card-footer bg-transparent d-flex justify-content-between">
-                    <button 
-                      className="btn btn-sm btn-primary"
-                      onClick={() => navigate(`/item/${item._id}`)}
-                    >
-                      View Details
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => handleDeleteItem(item._id!)}
-                    >
-                      Delete
-                    </button>
+                  <div className="match-connector">
+                    <FontAwesomeIcon icon={faExchangeAlt} />
+                  </div>
+                  <div className="match-item">
+                    <div className="match-item-image-container">
+                      <img
+                        src={match.item2?.imageUrl}
+                        alt={match.item2?.name}
+                        className="match-item-image"
+                      />
+                    </div>
+                    <div className="match-item-details">
+                      <h5>{match.item2?.name}</h5>
+                      <p className="text-muted small">{match.item2?.category}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="match-actions">
+                  <button
+                    className="btn btn-outline-primary w-100"
+                    onClick={() => navigate(`/match-confirmation/${match._id}`)}
+                  >
+                    <FontAwesomeIcon icon={faCheckCircle} className="me-2" />
+                    Verify Match Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {matchesWithItems.length === 0 && (
+            <div className="col-12">
+              <div className="text-center py-5">
+                <FontAwesomeIcon icon={faSearch} className="display-1 text-muted mb-4" />
+                <p className="h4 text-muted">No matches found</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* My Lost Items Section */}
+      <div className="section-card mb-5">
+        <div className="section-header">
+          <h2 className="section-title">
+            <FontAwesomeIcon icon={faSearch} className="me-2" />
+            My Lost Items
+          </h2>
+        </div>
+        <div className="row g-4">
+          {lostItems.map((item) => (
+            <div key={item._id} className="col-sm-6 col-lg-4 col-xl-3">
+              <div 
+                className="item-card"
+                onClick={() => navigate(`/item/${item._id}`)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="card-img-wrapper">
+                  <img 
+                    src={item.imageUrl} 
+                    alt={item.name || 'Unnamed Item'}
+                    className="card-img-top"
+                    style={{ height: "200px", objectFit: "cover" }}
+                  />
+                  {item.isResolved && (
+                    <div className="badge-resolved">
+                      Found
+                    </div>
+                  )}
+                  <div className="card-overlay">
+                    <h6 className="mb-1">{item.name}</h6>
+                    <p className="mb-0 small">{item.description || 'No description'}</p>
+                  </div>
+                </div>
+                <div className="card-body">
+                  <div className="item-details">
+                    <div className="detail">
+                      <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2" />
+                      {formatLocation(item.location) || 'Location not specified'}
+                    </div>
+                    <div className="detail">
+                      <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+                      {new Date(item.date).toLocaleDateString()}
+                    </div>
+                    <div className="detail">
+                      <FontAwesomeIcon icon={faTag} className="me-2" />
+                      {item.category || 'Uncategorized'}
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+          {lostItems.length === 0 && (
+            <div className="col-12">
+              <div className="text-center py-5">
+                <FontAwesomeIcon icon={faSearch} className="display-1 text-muted mb-4" />
+                <p className="h4 text-muted">No lost items</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-      
-      <div className="mt-4">
-        <h3>My Found Items</h3>
-        {itemsLoading ? (
-          <p>Loading items...</p>
-        ) : itemsError ? (
-          <p className="alert alert-danger">Error loading items: {itemsError}</p>
-        ) : foundItems.length === 0 ? (
-          <p className="alert alert-info">No found items reported</p>
-        ) : (
-          <div className="row">
-            {foundItems.map((item: Item) => (
-              <div key={item._id} className="col-md-6 col-lg-4 mb-4">
-                <div className="card shadow-sm h-100">
-                  {item.imageUrl && (
-                    <img 
-                      src={item.imageUrl} 
-                      className="card-img-top" 
-                      alt={item.name}
-                      style={{ height: "200px", objectFit: "cover" }}
-                    />
-                  )}
-                  <div className="card-body d-flex flex-column">
-                    <h5 className="card-text">{item.description}</h5>
-                    <div className="mt-auto">
-                      <p className="card-text mb-1">
-                        <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
-                        {item.category}
-                      </p>
-                      <p className="card-text mb-1">
-                        <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                        {formatLocation(item.location)}
-                      </p>
-                      <p className="card-text">
-                        <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
-                        {formatDate(item.date)}
-                      </p>
+
+      {/* My Found Items Section */}
+      <div className="section-card mb-5">
+        <div className="section-header">
+          <h2 className="section-title">
+            <FontAwesomeIcon icon={faHandHoldingHeart} className="me-2" />
+            My Found Items
+          </h2>
+        </div>
+        <div className="row g-4">
+          {foundItems.map((item) => (
+            <div key={item._id} className="col-sm-6 col-lg-4 col-xl-3">
+              <div 
+                className="item-card"
+                onClick={() => navigate(`/item/${item._id}`)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="card-img-wrapper">
+                  <img 
+                    src={item.imageUrl} 
+                    alt={item.name || 'Unnamed Item'}
+                    className="card-img-top"
+                    style={{ height: "200px", objectFit: "cover" }}
+                  />
+                  {item.isResolved && (
+                    <div className="badge-resolved">
+                      Returned
                     </div>
+                  )}
+                  <div className="card-overlay">
+                    <h6 className="mb-1">{item.name}</h6>
+                    <p className="mb-0 small">{item.description || 'No description'}</p>
                   </div>
-                  <div className="card-footer bg-transparent d-flex justify-content-between">
-                    <button 
-                      className="btn btn-sm btn-primary"
-                      onClick={() => navigate(`/item/${item._id}`)}
-                    >
-                      View Details
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => handleDeleteItem(item._id!)}
-                    >
-                      Delete
-                    </button>
+                </div>
+                <div className="card-body">
+                  <div className="item-details">
+                    <div className="detail">
+                      <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2" />
+                      {formatLocation(item.location) || 'Location not specified'}
+                    </div>
+                    <div className="detail">
+                      <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+                      {new Date(item.date).toLocaleDateString()}
+                    </div>
+                    <div className="detail">
+                      <FontAwesomeIcon icon={faTag} className="me-2" />
+                      {item.category || 'Uncategorized'}
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      <div className="my-4 text-center">
-        <button 
-          className="btn btn-success btn-lg"
-          onClick={() => navigate("/upload-item")}
-        >
-          <FontAwesomeIcon icon={faImage} className="me-2" />
-          Upload New Item
-        </button>
+            </div>
+          ))}
+          {foundItems.length === 0 && (
+            <div className="col-12">
+              <div className="text-center py-5">
+                <FontAwesomeIcon icon={faHandHoldingHeart} className="display-1 text-muted mb-4" />
+                <p className="h4 text-muted">No found items</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

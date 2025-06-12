@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faCheckDouble } from '@fortawesome/free-solid-svg-icons';
 import chatSocketService, { IChatMessage } from '../../services/chat.socket.service';
 import itemService, { Item } from '../../services/item-service';
-import matchService from '../../services/match-service';
+import matchService, { IMatch, IMatchResponse } from '../../services/match-service';
+import { useNotifications } from '../../hooks/useNotifications';
 import './ChatRoom.css';
 
 interface ChatRoomProps {
@@ -19,11 +20,25 @@ interface ChatRoomProps {
 const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherItem, otherUserId }) => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const { fetchNotifications } = useNotifications();
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [matchDetails, setMatchDetails] = useState<IMatch | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchMatchDetails = async () => {
+      try {
+        const response = await matchService.getById(matchId).request;
+        setMatchDetails(response.data);
+      } catch (error) {
+        console.error('Error fetching match details:', error);
+      }
+    };
+    fetchMatchDetails();
+  }, [matchId]);
 
   useEffect(() => {
     if (!currentUser?._id) return;
@@ -55,7 +70,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
 
     const handleError = (error: { message: string }) => {
       console.error('Chat error:', error);
-      // You might want to show this error to the user
     };
 
     chatSocketService.onChatHistory(handleChatHistory);
@@ -84,31 +98,57 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
     setNewMessage('');
   };
 
+  const isUserConfirmed = () => {
+    if (!matchDetails || !currentUser?._id) return false;
+    return currentUser._id === matchDetails.userId1 
+      ? matchDetails.user1Confirmed 
+      : matchDetails.user2Confirmed;
+  };
+
+  const isOtherUserConfirmed = () => {
+    if (!matchDetails || !currentUser?._id) return false;
+    return currentUser._id === matchDetails.userId1 
+      ? matchDetails.user2Confirmed 
+      : matchDetails.user1Confirmed;
+  };
+
+  const areBothConfirmed = () => {
+    return matchDetails?.user1Confirmed && matchDetails?.user2Confirmed;
+  };
+
   const handleConfirmMatch = async () => {
-    if (!userItem || !otherItem) return;
+    if (!currentUser?._id) return;
     
     try {
       setIsConfirming(true);
       
-      // Mark both items as resolved
-      await Promise.all([
-        itemService.updateItem(userItem._id!, { isResolved: true }),
-        itemService.updateItem(otherItem._id!, { isResolved: true })
-      ]);
+      const response = await matchService.confirmMatch(matchId, currentUser._id).request;
+      const { status, match: updatedMatch } = response.data;
 
-      // Delete the match
-      await matchService.deleteById(matchId).request;
+      setMatchDetails(updatedMatch);
 
-      // Navigate to dashboard
-      navigate('/dashboard', { 
-        state: { 
-          success: true, 
-          message: 'Match confirmed and items marked as resolved!' 
-        } 
-      });
+      // If both users have confirmed
+      if (status === 'FULLY_CONFIRMED') {
+        // Refresh notifications since they should be deleted
+        await fetchNotifications();
+        
+        if (onClose) {
+          onClose();
+        }
+        navigate('/', { 
+          state: { 
+            success: true, 
+            message: 'Match confirmed! Both items have been marked as resolved.' 
+          } 
+        });
+      }
+
+      setIsConfirming(false);
     } catch (error) {
       console.error('Error confirming match:', error);
       setIsConfirming(false);
+      // Show error message to user
+      alert(error instanceof Error ? error.message : 'Failed to confirm match. Please try again.');
     }
   };
 
@@ -125,31 +165,58 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
   return (
     <div className="chat-room">
       <div className="chat-header">
-        <h3>Chat</h3>
-        <div className="chat-actions">
+        <div className="chat-header-content">
+          <h3>Chat</h3>
           {userItem && otherItem && (
+            <div className="matched-items">
+              <div className="matched-item">
+                <img 
+                  src={userItem.imageUrl} 
+                  alt="Your item"
+                  className="matched-item-thumbnail"
+                />
+                <span className="matched-item-label">Your item</span>
+                {userItem.isResolved && <span className="resolved-badge">Resolved</span>}
+                {isUserConfirmed() && <span className="confirmed-badge">You confirmed</span>}
+              </div>
+              <div className="matched-item">
+                <img 
+                  src={otherItem.imageUrl} 
+                  alt="Their item"
+                  className="matched-item-thumbnail"
+                />
+                <span className="matched-item-label">Their item</span>
+                {otherItem.isResolved && <span className="resolved-badge">Resolved</span>}
+                {isOtherUserConfirmed() && <span className="confirmed-badge">They confirmed</span>}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="chat-actions">
+          {userItem && otherItem && !userItem.isResolved && !otherItem.isResolved && !isUserConfirmed() && (
             <button 
               className="btn btn-success me-2" 
               onClick={handleConfirmMatch}
               disabled={isConfirming}
             >
-              <FontAwesomeIcon icon={faCheck} className="me-2" />
-              Confirm Match
+              <FontAwesomeIcon icon={isOtherUserConfirmed() ? faCheckDouble : faCheck} className="me-2" />
+              {isOtherUserConfirmed() ? 'Confirm Match (Final)' : 'Confirm Match'}
             </button>
           )}
           {onClose && (
-            <button className="close-button" onClick={onClose}>
+            <button 
+              className="close-button" 
+              onClick={onClose}
+              aria-label="Close chat"
+            >
               ×
             </button>
           )}
         </div>
       </div>
-
       <div className="messages-container">
         {messages.length === 0 ? (
-          <div className="no-messages">
-            No messages yet. Start the conversation!
-          </div>
+          <div className="no-messages">No messages yet. Start the conversation!</div>
         ) : (
           messages.map((message) => (
             <div
@@ -157,29 +224,23 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ matchId, onClose, userItem, otherIt
               className={`message ${message.senderId === currentUser?._id ? 'sent' : 'received'}`}
             >
               <div className="message-content">{message.content}</div>
-              <div className="message-meta">
+              <div className="message-timestamp">
                 {new Date(message.timestamp).toLocaleTimeString()}
-                {message.senderId === currentUser?._id && (
-                  <span className="message-status">{message.status}</span>
-                )}
               </div>
             </div>
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
-
       <form onSubmit={handleSendMessage} className="message-input">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type a message..."
-          maxLength={1000}
+          disabled={areBothConfirmed()}
         />
-        <button type="submit" disabled={!newMessage.trim()}>
-          Send
-        </button>
+        <button type="submit" disabled={!newMessage.trim() || areBothConfirmed()}>Send</button>
       </form>
     </div>
   );

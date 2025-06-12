@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** @format */
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useMemo } from "react";
 import { useLostItems } from "../../hooks/useItems";
 import { useAuth } from "../../hooks/useAuth";
 import { Item } from "../../services/item-service";
@@ -12,9 +12,15 @@ import {
   faMapMarkerAlt,
   faCalendarAlt,
   faTag,
-  faPlus
+  faPlus,
+  faFilter,
+  faMapMarked,
+  faHandHoldingHeart,
+  faLightbulb
 } from "@fortawesome/free-solid-svg-icons";
 import itemService from "../../services/item-service";
+import EurekaParticles from './EurekaParticles';
+import './styles.css';
 
 type SortOption = 'newest' | 'oldest' | 'category';
 
@@ -26,6 +32,18 @@ const LostItems: FC = () => {
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  // Get unique categories from current items
+  const availableCategories = useMemo(() => {
+    if (!items) return [];
+    const categories = items
+      .map(item => item.category)
+      .filter((category): category is string => 
+        category !== undefined && category !== null && category !== ''
+      );
+    return Array.from(new Set(categories)).sort();
+  }, [items]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -98,11 +116,12 @@ const LostItems: FC = () => {
     return String(location);
   };
 
-  const getSortedItems = () => {
+  const getSortedAndFilteredItems = () => {
     if (!items) return [];
     
     let filteredItems = items;
     
+    // Filter by search term
     if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filteredItems = filteredItems.filter(item => {
@@ -116,6 +135,13 @@ const LostItems: FC = () => {
                category.includes(term) ||
                location.includes(term);
       });
+    }
+
+    // Filter by category
+    if (selectedCategory) {
+      filteredItems = filteredItems.filter(item => 
+        item.category?.toLowerCase() === selectedCategory.toLowerCase()
+      );
     }
     
     const itemsCopy = [...filteredItems];
@@ -144,141 +170,189 @@ const LostItems: FC = () => {
     }
   };
 
-  const sortedItems = getSortedItems();
-  const getSortOptionText = () => {
-    switch (sortOption) {
-      case 'newest': return 'Newest';
-      case 'oldest': return 'Oldest';
-      case 'category': return 'Category';
-      default: return 'Sort by';
-    }
-  };
-
-
+  const sortedAndFilteredItems = getSortedAndFilteredItems();
 
   return (
-    <div className="container mt-3">
-      <div className="row mb-4">
-        <div className="col-md-6">
-          <div className="input-group">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button className="btn btn-outline-secondary" type="button">
-              <FontAwesomeIcon icon={faSearch} />
-            </button>
+    <div className="lost-items-container">
+      {/* Hero Section with Particle Animation */}
+      <div className="hero-section">
+        <EurekaParticles />
+      </div>
+
+      <div className="container lost-items-content">
+        {/* Search Section */}
+        <div className="search-container mb-5">
+          <input
+            type="text"
+            className="search-bar"
+            placeholder="Search for lost items..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <button
+            className="action-button"
+            onClick={() => navigate('/report')}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            Report Item
+          </button>
+          <button
+            className="action-button map-button"
+            onClick={() => navigate('/map')}
+          >
+            <FontAwesomeIcon icon={faMapMarked} />
+            Map View
+          </button>
+        </div>
+
+        {/* Stats Section */}
+        <div className="row g-4 mb-5">
+          <div className="col-md-4">
+            <div className="stats-card">
+              <div className="card-body text-center">
+                <div className="stats-icon stats-primary mx-auto">
+                  <FontAwesomeIcon icon={faLightbulb} />
+                </div>
+                <h3 className="h2 mb-2">{items.length}</h3>
+                <p className="text-muted mb-0">Reported Items</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-4">
+            <div className="stats-card">
+              <div className="card-body text-center">
+                <div className="stats-icon stats-success mx-auto">
+                  <FontAwesomeIcon icon={faHandHoldingHeart} />
+                </div>
+                <h3 className="h2 mb-2">
+                  {items.filter(item => item.isResolved).length}
+                </h3>
+                <p className="text-muted mb-0">Returned Items</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-md-4">
+            <div className="stats-card">
+              <div className="card-body text-center">
+                <div className="stats-icon stats-warning mx-auto">
+                  <FontAwesomeIcon icon={faSearch} />
+                </div>
+                <h3 className="h2 mb-2">
+                  {items.filter(item => !item.isResolved).length}
+                </h3>
+                <p className="text-muted mb-0">Items in Search</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="col-md-6">
-          <div className="dropdown">
-            <button 
-              className="btn btn-outline-secondary dropdown-toggle" 
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              Sort by: {getSortOptionText()}
-            </button>
-            {dropdownOpen && (
-              <div className="dropdown-menu show">
-                <button 
-                  key="sort-newest"
-                  className="dropdown-item"
-                  onClick={() => handleSortChange('newest')}>
-                  Newest
-                </button>
-                <button 
-                  key="sort-oldest"
-                  className="dropdown-item"
-                  onClick={() => handleSortChange('oldest')}>
-                  Oldest
-                </button>
-                <button 
-                  key="sort-category"
-                  className="dropdown-item"
-                  onClick={() => handleSortChange('category')}>
-                  Category
-                </button>
+
+        {/* Items Grid */}
+        <div className="card border-0 shadow-sm">
+          <div className="card-header bg-white py-4">
+            <div className="d-flex justify-content-between align-items-center">
+              <h2 className="h4 mb-0">Recent Items</h2>
+              <div className="d-flex gap-3">
+                <select
+                  className="form-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="">All Categories</option>
+                  {availableCategories.map(category => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                
+                <select
+                  className="form-select"
+                  value={sortOption}
+                  onChange={(e) => handleSortChange(e.target.value as SortOption)}
+                >
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="category">By Category</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="card-body p-4">
+            {error && (
+              <div className="alert alert-danger">
+                Error: {error}
               </div>
             )}
+
+            {isLoading && (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+              </div>
+            )}
+
+            {!isLoading && sortedAndFilteredItems.length === 0 && (
+              <div className="text-center py-5">
+                <FontAwesomeIcon icon={faHandHoldingHeart} className="display-1 text-muted mb-4" />
+                <p className="h4 text-muted">No items found</p>
+              </div>
+            )}
+
+            <div className="row g-4">
+              {sortedAndFilteredItems.map((item: Item) => {
+                const itemId = item._id;
+                if (!itemId) return null;
+                
+                return (
+                  <div key={itemId} className="col-sm-6 col-lg-4 col-xl-3">
+                    <div 
+                      className="item-card"
+                      onClick={() => navigate(`/item/${itemId}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="card-img-wrapper">
+                        <img 
+                          src={item.imageUrl} 
+                          alt={item.name || 'Unnamed Item'}
+                          className="card-img-top"
+                          style={{ height: "200px", objectFit: "cover" }}
+                        />
+                        {item.isResolved && (
+                          <div className="badge-resolved">
+                            Returned to owner
+                          </div>
+                        )}
+                        <div className="card-overlay">
+                          <h6 className="mb-1">Additional Details</h6>
+                          <p className="mb-0 small">{item.description || 'No description'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="card-body">
+                        <h5 className="card-title h6 mb-3 text-truncate">
+                          {item.description || 'No description available'}
+                        </h5>
+                        
+                        <div className="card-meta mb-2">
+                          <FontAwesomeIcon icon={faTag} className="text-primary" />
+                          <span>{item.category || 'No category'}</span>
+                        </div>
+                        
+                        <div className="card-meta">
+                          <FontAwesomeIcon icon={faCalendarAlt} className="text-success" />
+                          <span>{formatDate(item.date)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-
-      {error && <p className="alert alert-danger">Error: {error}</p>}
-      {isLoading && !error && <p>Loading...</p>}
-      {!isLoading && sortedItems.length === 0 && !error && (
-        <p className="alert alert-warning">No lost items available.</p>
-      )}
-
-      {sortedItems.length > 0 && (
-        <div className="row">
-          {sortedItems.map((item: Item) => {
-            const itemId = item._id;
-            if (!itemId) {
-              console.error("Item without _id found:", item);
-              return null; 
-            }
-            
-            const imgURL = item.imageUrl;
-            
-            return (
-              <div key={itemId} className="col-md-6 col-lg-4 mb-4">
-                <div className="card shadow-sm h-100">
-                  {imgURL && (
-                    <img 
-                      src={imgURL} 
-                      className="card-img-top" 
-                      alt={item.name || 'Unnamed Item'}
-                      style={{ height: "200px", objectFit: "cover" }}
-                    />
-                  )}
-                  <div className="card-body d-flex flex-column">
-                    <h5 className="card-text">{item.description || 'No description available'}</h5>
-                    <div className="mt-auto">
-                      <p className="card-text mb-1">
-                        <FontAwesomeIcon icon={faTag} className="me-2 text-secondary" />
-                        {item.category || 'Uncategorized'}
-                      </p>
-                      <p className="card-text mb-1">
-                        <FontAwesomeIcon icon={faMapMarkerAlt} className="me-2 text-danger" />
-                        {formatLocation(item.location)}
-                      </p>
-                      <p className="card-text">
-                        <FontAwesomeIcon icon={faCalendarAlt} className="me-2 text-info" />
-                        {formatDate(item.date)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="card-footer bg-transparent d-flex justify-content-between">
-                    <button 
-                      className="btn btn-sm btn-primary"
-                      onClick={() => navigate(`/item/${itemId}`)}
-                    >
-                      View Details
-                    </button>
-                    {currentUser?._id === (item.userId) && (
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() => handleDelete(itemId)}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <button
-        className="btn btn-success position-fixed bottom-0 end-0 m-3"
-        onClick={() => navigate("/upload-item")}>
-        <FontAwesomeIcon icon={faPlus} className="me-2" /> Add Item
-      </button>
     </div>
   );
 };

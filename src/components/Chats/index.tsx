@@ -3,6 +3,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import chatSocketService, { IChatMessage, IUserChatInfo } from '../../services/chat.socket.service';
 import userService, { IUser } from '../../services/user-service';
+import matchService from '../../services/match-service';
+import itemService, { Item } from '../../services/item-service';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faArrowLeft, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 import ChatRoom from '../ChatRoom';
@@ -10,6 +12,8 @@ import './Chats.css';
 
 interface EnhancedChatInfo extends IUserChatInfo {
   otherUserName?: string;
+  userItem?: Item;
+  otherItem?: Item;
 }
 
 const Chats: React.FC = () => {
@@ -56,17 +60,38 @@ const Chats: React.FC = () => {
         // Filter out any invalid chat objects
         const validChats = userChats.filter(chat => chat && chat.otherUserId && chat.matchId);
         
-        // Fetch user names for all other users
+        // Fetch user names and match details for all chats
         const enhancedChats = await Promise.all(
           validChats.map(async (chat) => {
             try {
-              const response = await userService.getUserById(chat.otherUserId).request;
+              const [userResponse, matchResponse] = await Promise.all([
+                userService.getUserById(chat.otherUserId).request,
+                matchService.getById(chat.matchId).request
+              ]);
+
+              const match = matchResponse.data;
+              
+              // Fetch both items
+              const [item1Response, item2Response] = await Promise.all([
+                itemService.getItemById(match.item1Id).request,
+                itemService.getItemById(match.item2Id).request
+              ]);
+
+              const item1 = item1Response.data;
+              const item2 = item2Response.data;
+
+              // Determine which item belongs to the current user
+              const userItem = item1.userId === currentUser?._id ? item1 : item2;
+              const otherItem = item1.userId === currentUser?._id ? item2 : item1;
+
               return {
                 ...chat,
-                otherUserName: response.data.userName
+                otherUserName: userResponse.data.userName,
+                userItem,
+                otherItem
               };
             } catch (error) {
-              console.error(`Error fetching user ${chat.otherUserId}:`, error);
+              console.error(`Error fetching details for chat ${chat.matchId}:`, error);
               return {
                 ...chat,
                 otherUserName: 'Unknown User'
@@ -217,6 +242,8 @@ const Chats: React.FC = () => {
         <ChatRoom 
           matchId={selectedChat.matchId}
           otherUserId={selectedChat.otherUserId}
+          userItem={selectedChat.userItem}
+          otherItem={selectedChat.otherItem}
           onClose={() => setSelectedChat(null)}
         />
       </div>
@@ -275,6 +302,20 @@ const Chats: React.FC = () => {
                 <div className="chat-preview-message">
                   {chat.lastMessage?.content || 'No messages yet'}
                 </div>
+                {chat.userItem && chat.otherItem && (
+                  <div className="chat-preview-items">
+                    <img 
+                      src={chat.userItem.imageUrl} 
+                      alt="Your item"
+                      className="chat-item-thumbnail"
+                    />
+                    <img 
+                      src={chat.otherItem.imageUrl} 
+                      alt="Their item"
+                      className="chat-item-thumbnail"
+                    />
+                  </div>
+                )}
               </div>
               {chat.unreadCount > 0 && (
                 <div className="unread-badge">{chat.unreadCount}</div>
