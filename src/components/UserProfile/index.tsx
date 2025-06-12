@@ -457,8 +457,8 @@ const UserProfile: FC = () => {
       <div className="section-card mb-5">
         <div className="section-header">
           <h2 className="section-title">
-            <FontAwesomeIcon icon={faHandshake} className="me-2" />
-            My Matches
+            <FontAwesomeIcon icon={faHandshake} />
+            <span>My Matches</span>
           </h2>
         </div>
         <div className="row g-4">
@@ -524,8 +524,8 @@ const UserProfile: FC = () => {
       <div className="section-card mb-5">
         <div className="section-header">
           <h2 className="section-title">
-            <FontAwesomeIcon icon={faSearch} className="me-2" />
-            My Lost Items
+            <FontAwesomeIcon icon={faSearch} />
+            <span>My Lost Items</span>
           </h2>
         </div>
         <div className="row g-4">
@@ -587,8 +587,8 @@ const UserProfile: FC = () => {
       <div className="section-card mb-5">
         <div className="section-header">
           <h2 className="section-title">
-            <FontAwesomeIcon icon={faHandHoldingHeart} className="me-2" />
-            My Found Items
+            <FontAwesomeIcon icon={faHandHoldingHeart} />
+            <span>My Found Items</span>
           </h2>
         </div>
         <div className="row g-4">

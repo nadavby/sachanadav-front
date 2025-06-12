@@ -17,7 +17,7 @@ import {
   faTrash
 } from "@fortawesome/free-solid-svg-icons";
 import { itemCategories, ItemCategoryGroup } from "../../data/itemCategories";
-import { useLoadScript } from "@react-google-maps/api";
+import { Map, AdvancedMarker, APIProvider, MapMouseEvent } from "@vis.gl/react-google-maps";
 import { itemColors } from "../../data/itemColors";
 import { getAvailableMaterials } from "../../data/ItemMaterials";
 import "./styles.css";
@@ -50,22 +50,18 @@ const mapContainerStyle = {
   border: "1px solid #e2e8f0"
 };
 
-const libraries = ["places"];
+const defaultCenter = {
+  lat: 32.0853,
+  lng: 34.7818
+};
+
+const MAP_ID = "8f541b0f4d9364bf";
 
 const ItemUpload: FC = () => {
   const navigate = useNavigate();
   const { currentUser, isAuthenticated, loading } = useAuth();
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
-  
   const [apiKey] = useState("AIzaSyAlx_vvH0P5fepk8bHpzO54syb5heCvJXI");
   
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: apiKey,
-    libraries: libraries as any
-  });
-
   const [formData, setFormData] = useState<ItemFormData>({
     reportType: "lost",
     categoryGroup: "",
@@ -89,73 +85,22 @@ const ItemUpload: FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [otherCategory, setOtherCategory] = useState<string>("");
-  const [mapInitialized, setMapInitialized] = useState(false);
   const [locationError, setLocationError] = useState<string | null>("Please select a location");
 
-  useEffect(() => {
-    if (isLoaded && !loadError && mapContainerRef.current && !mapInitialized) {
-      try {
-        const map = new window.google.maps.Map(mapContainerRef.current, {
-          center: { lat: 32.0853, lng: 34.7818 },
-          zoom: 13,
-          fullscreenControl: false,
-          mapTypeControl: false,
-          streetViewControl: false,
-          zoomControl: true
-        });
-        
-        const marker = new window.google.maps.Marker({
-          map: map,
-          draggable: true,
-          visible: false
-        });
-        
-        map.addListener('click', (e: google.maps.MapMouseEvent) => {
-          if (e.latLng) {
-            marker.setPosition(e.latLng);
-            marker.setVisible(true);
-            setFormData(prev => ({
-              ...prev,
-              location: {
-                lat: e.latLng.lat(),
-                lng: e.latLng.lng()
-              }
-            }));
-            setLocationError(null);
-          }
-        });
-        
-        marker.addListener('dragend', () => {
-          const position = marker.getPosition();
-          if (position) {
-            setFormData(prev => ({
-              ...prev,
-              location: {
-                lat: position.lat(),
-                lng: position.lng()
-              }
-            }));
-            setLocationError(null);
-          }
-        });
-        
-        googleMapRef.current = map;
-        markerRef.current = marker;
-        setMapInitialized(true);
-      } catch (err) {
-        console.error("Error initializing Google Map:", err);
-        setError("Failed to initialize the map. Please try again later.");
-      }
+  const handleMapClick = (e: MapMouseEvent) => {
+    const position = e.detail.latLng;
+    if (position) {
+      const newLocation = {
+        lat: position.lat,
+        lng: position.lng
+      };
+      setFormData(prev => ({
+        ...prev,
+        location: newLocation
+      }));
+      setLocationError(null);
     }
-  }, [isLoaded, loadError, mapInitialized]);
-  
-  useEffect(() => {
-    if (mapInitialized && markerRef.current && formData.location) {
-      markerRef.current.setPosition(formData.location);
-      markerRef.current.setVisible(true);
-      googleMapRef.current?.setCenter(formData.location);
-    }
-  }, [formData.location, mapInitialized]);
+  };
 
   const handleGetCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -171,14 +116,6 @@ const ItemUpload: FC = () => {
             location: newLocation
           }));
           setLocationError(null);
-          
-          if (markerRef.current) {
-            markerRef.current.setPosition(newLocation);
-            markerRef.current.setVisible(true);
-          }
-          if (googleMapRef.current) {
-            googleMapRef.current.setCenter(newLocation);
-          }
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -331,14 +268,6 @@ const ItemUpload: FC = () => {
       setIsSubmitting(false);
     }
   };
-
-  if (loadError) {
-    return <div>Error loading maps: {loadError.message}</div>;
-  }
-
-  if (!isLoaded) {
-    return <div>Loading maps...</div>;
-  }
 
   return (
     <div className="item-upload-container">
@@ -564,7 +493,39 @@ const ItemUpload: FC = () => {
               Location
             </label>
             <div className="map-container">
-              <div ref={mapContainerRef} style={mapContainerStyle} />
+              <APIProvider apiKey={apiKey}>
+                <Map
+                  style={mapContainerStyle}
+                  defaultCenter={defaultCenter}
+                  defaultZoom={13}
+                  gestureHandling={'greedy'}
+                  disableDefaultUI={false}
+                  zoomControl={true}
+                  streetViewControl={false}
+                  mapTypeControl={false}
+                  mapId={MAP_ID}
+                  onClick={handleMapClick}
+                >
+                  {formData.location && (
+                    <AdvancedMarker
+                      position={formData.location}
+                      draggable={true}
+                      onDrag={(e) => {
+                        if (e.latLng) {
+                          setFormData(prev => ({
+                            ...prev,
+                            location: {
+                              lat: e.latLng.lat(),
+                              lng: e.latLng.lng()
+                            }
+                          }));
+                          setLocationError(null);
+                        }
+                      }}
+                    />
+                  )}
+                </Map>
+              </APIProvider>
               <button
                 type="button"
                 onClick={handleGetCurrentLocation}
