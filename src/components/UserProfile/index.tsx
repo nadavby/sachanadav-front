@@ -5,7 +5,7 @@ import { FC, useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useUserItems } from "../../hooks/useItems";
 import { useMatch } from "../../hooks/useMatch";
-import { useMatchItems } from "../../hooks/useMatchItems";
+import { useMatchItems } from "../../hooks/useMatch";
 import { Item } from "../../services/item-service";
 import userService from "../../services/user-service";
 import itemService from "../../services/item-service";

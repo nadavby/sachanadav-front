@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import matchService, { IMatch, CanceledError } from '../services/match-service';
 import { useAuth } from './useAuth';
-import { Item } from '../services/item-service';
 import  itemService  from '../services/item-service';
 
 export const useMatch = () => {
@@ -91,52 +90,47 @@ export const useMatch = () => {
   };
 };
 
-export const useMatchItems = (matchIds: string[]) => {
-  const [matchItems, setMatchItems] = useState<Item[]>([]);
+export const useMatchItems = (itemIds: string[]) => {
+  const [matchItems, setMatchItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Memoize matchIds array using a stable stringification
-  const memoizedMatchIds = useMemo(() => {
-    if (!matchIds || matchIds.length === 0) return [];
-    return [...new Set(matchIds)].sort();
-  }, [matchIds]);
-
   useEffect(() => {
-    const fetchMatchItems = async () => {
-      if (!memoizedMatchIds || memoizedMatchIds.length === 0) {
+    const fetchItems = async () => {
+      if (!itemIds.length) {
         setMatchItems([]);
         setIsLoading(false);
         return;
       }
 
-      setIsLoading(true);
-      setError(null);
-      
       try {
-        const itemsPromises = memoizedMatchIds.map(async (matchId) => {
-          const { request } = itemService.getItemById(matchId);
-          const response = await request;
-          return response.data;
-        });
+        const items = await Promise.all(
+          itemIds.map(async (id) => {
+            try {
+              const { request } = itemService.getItemById(id);
+              const response = await request;
+              return response.data;
+            } catch (error) {
+              console.error(`Error fetching item ${id}:`, error);
+              return null;
+            }
+          })
+        );
 
-        const items = await Promise.all(itemsPromises);
-        setMatchItems(items.filter((item): item is Item => item !== null));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        setMatchItems(items.filter(item => item !== null));
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching match items:', error);
+        setError('Failed to fetch match items');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchMatchItems();
-  }, [memoizedMatchIds]);
+    fetchItems();
+  }, [itemIds]);
 
-  return {
-    matchItems,
-    isLoading,
-    error
-  };
+  return { matchItems, isLoading, error };
 }; 
 
 
