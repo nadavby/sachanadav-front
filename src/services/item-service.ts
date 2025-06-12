@@ -154,53 +154,9 @@ const addItem = async (formData: FormData) => {
   }
 };
 
-const updateItem = async (id: string, item: Partial<Item>, image?: File) => {
-  try {
-    if (!image) {
-      console.log("No image provided for update - using direct JSON PUT");
-      return apiClient.put<Item>(`/items/${id}`, item, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    }
-    console.log("Image provided for update - using FormData");
-    const formData = new FormData();
-    if (item.name) formData.append("name", item.name);
-    if (item.description) formData.append("description", item.description);
-    if (item.category) formData.append("category", item.category);
-    if (item.location) formData.append("location", item.location ? JSON.stringify(item.location) : '');
-    if (item.date) formData.append("date", item.date);
-    if (item.itemType) formData.append("itemType", item.itemType);
-    if (item.isResolved !== undefined) {
-      formData.append("isResolved", String(item.isResolved));
-    }
-
-    formData.append("itemData", JSON.stringify(item));
-    formData.append("image", image, image.name);
-    return apiClient.put<Item>(`/items/${id}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-  } catch (error: any) {
-    console.error("Error in updateItem:", error.message);
-
-    throw error;
-  }
-};
-
 const deleteItem = (id: string) => {
   const abortController = new AbortController();
   const request = apiClient.delete(`/items/${id}`, {
-    signal: abortController.signal,
-  });
-  return { request, abort: () => abortController.abort() };
-};
-
-const resolveItem = (id: string) => {
-  const abortController = new AbortController();
-  const request = apiClient.put(`/items/${id}/resolve`, null, {
     signal: abortController.signal,
   });
   return { request, abort: () => abortController.abort() };
@@ -213,7 +169,5 @@ export default {
   getItemById,
   getItemsByUser,
   addItem,
-  updateItem,
   deleteItem,
-  resolveItem,
 };
