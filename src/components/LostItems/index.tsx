@@ -317,36 +317,33 @@ const LostItems: FC = () => {
                           src={item.imageUrl} 
                           alt={item.name || 'Unnamed Item'}
                           className="card-img-top"
+                          style={{ height: "200px", objectFit: "cover", width: "100%" }}
+                          width="100%"
                         />
                         {item.isResolved && (
                           <div className="badge-resolved">
-                            Found
+                            Returned to owner
                           </div>
                         )}
                         <div className="card-overlay">
-                          <h6 className="mb-1">{item.name || 'Unnamed Item'}</h6>
+                          <h6 className="mb-1">Additional Details</h6>
                           <p className="mb-0 small">{item.description || 'No description'}</p>
                         </div>
                       </div>
                       
                       <div className="card-body">
-                        <h5 className="card-title text-truncate">
-                          {item.name || 'Unnamed Item'}
+                        <h5 className="card-title h6 mb-3 text-truncate">
+                          {item.description || 'No description available'}
                         </h5>
                         
-                        <div className="card-meta">
-                          <FontAwesomeIcon icon={faTag} />
+                        <div className="card-meta mb-2">
+                          <FontAwesomeIcon icon={faTag} className="text-primary" />
                           <span>{item.category || 'No category'}</span>
                         </div>
                         
                         <div className="card-meta">
-                          <FontAwesomeIcon icon={faCalendarAlt} />
+                          <FontAwesomeIcon icon={faCalendarAlt} className="text-success" />
                           <span>{formatDate(item.date)}</span>
-                        </div>
-
-                        <div className="card-meta">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} />
-                          <span>{formatLocation(item.location)}</span>
                         </div>
                       </div>
                     </div>

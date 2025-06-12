@@ -196,17 +196,19 @@ export const RegistrationForm: FC = () => {
                     <FontAwesomeIcon icon={faPhone} className="me-2" />
                     Phone Number
                   </label>
-                  <div className={errors.phoneNumber ? "is-invalid" : ""}>
+                  <div className={`phone-input-wrapper ${errors.phoneNumber ? "is-invalid" : ""}`}>
                     <PhoneInput
-                      international
+                      international={false}
                       defaultCountry="IL"
                       value={phoneValue}
                       onChange={setPhoneValue}
                       id="phoneNumber"
+                      useNationalFormatForDefaultCountry={true}
+                      displayInitialValueAsLocalNumber={true}
                     />
                   </div>
                   {errors.phoneNumber && (
-                    <div className="invalid-feedback">{errors.phoneNumber.message}</div>
+                    <div className="invalid-feedback d-block">{errors.phoneNumber.message}</div>
                   )}
                 </div>
 
