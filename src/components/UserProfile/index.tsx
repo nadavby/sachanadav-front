@@ -4,8 +4,7 @@
 import { FC, useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useUserItems } from "../../hooks/useItems";
-import { useMatch } from "../../hooks/useMatch";
-import { useMatchItems } from "../../hooks/useMatch";
+import { useMatch,useMatchItems } from "../../hooks/useMatch";
 import { Item } from "../../services/item-service";
 import userService from "../../services/user-service";
 import itemService from "../../services/item-service";
@@ -88,7 +87,6 @@ const UserProfile: FC = () => {
       setMatchesWithItems([]);
       return;
     }
-    
     const matchesWithDetails = matches.map(match => {
       const item1 = matchItems.find(item => item._id === match.item1Id);
       const item2 = matchItems.find(item => item._id === match.item2Id);
@@ -455,7 +453,6 @@ const UserProfile: FC = () => {
           </div>
         </form>
       </div>
-
       {/* My Matches Section */}
       <div className="section-card mb-5">
         <div className="section-header">
@@ -480,6 +477,7 @@ const UserProfile: FC = () => {
                     <div className="match-item-details">
                       <h5>{match.item1?.name}</h5>
                       <p className="text-muted small">{match.item1?.category}</p>
+
                     </div>
                   </div>
                   <div className="match-connector">
