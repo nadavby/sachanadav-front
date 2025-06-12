@@ -174,125 +174,123 @@ const ItemDetail: React.FC = () => {
 
       <div className="item-card">
         <div className="item-details">
-          <div className="d-flex justify-content-between align-items-start mb-4">
-            <h2>{item.name}</h2>
+          <div className="description-container">
+            <h2 className="main-description">{item.description || 'No description available'}</h2>
           </div>
 
-          <div className="row">
-            <div className="col-md-6">
-              <div className="item-image-container">
-                <img 
-                  src={item.imageUrl} 
-                  alt={item.name}
-                  className="item-image"
-                />
+          <div className="details-section">
+            <div className="row">
+              <div className="col-md-6">
+                <div className="item-image-container">
+                  <img 
+                    src={item.imageUrl} 
+                    alt={item.description || 'Item image'}
+                    className="item-image"
+                  />
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <ul className="info-list">
+                  <li className="info-item">
+                    <div className="info-icon category">
+                      <FontAwesomeIcon icon={faTag} />
+                    </div>
+                    <span className="info-label">Category</span>
+                    <span className="info-value">{item.category}</span>
+                  </li>
+                  <li className="info-item">
+                    <div className="info-icon location">
+                      <FontAwesomeIcon icon={faMapMarkerAlt} />
+                    </div>
+                    <span className="info-label">Location</span>
+                    <span className="info-value">{formatLocation(item.location)}</span>
+                  </li>
+                  <li className="info-item">
+                    <div className="info-icon date">
+                      <FontAwesomeIcon icon={faCalendarAlt} />
+                    </div>
+                    <span className="info-label">Date</span>
+                    <span className="info-value">
+                      {new Date(item.date).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  </li>
+                </ul>
               </div>
             </div>
 
-            <div className="col-md-6">
-              <div className="description-section">
-                <h5 className="description-text">{item.description}</h5>
-              </div>
-
-              <ul className="info-list">
-                <li className="info-item">
-                  <div className="info-icon category">
-                    <FontAwesomeIcon icon={faTag} />
-                  </div>
-                  <span className="info-label">Category</span>
-                  <span className="info-value">{item.category}</span>
-                </li>
-                <li className="info-item">
-                  <div className="info-icon location">
-                    <FontAwesomeIcon icon={faMapMarkerAlt} />
-                  </div>
-                  <span className="info-label">Location</span>
-                  <span className="info-value">{formatLocation(item.location)}</span>
-                </li>
-                <li className="info-item">
-                  <div className="info-icon date">
-                    <FontAwesomeIcon icon={faCalendarAlt} />
-                  </div>
-                  <span className="info-label">Date</span>
-                  <span className="info-value">
-                    {new Date(item.date).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Map Section */}
-          <div className="map-section">
-            <h5>Location on Map</h5>
-            <div style={{ width: "100%", margin: "0 auto" }}>
-              <APIProvider apiKey="AIzaSyAlx_vvH0P5fepk8bHpzO54syb5heCvJXI">
-                <Map 
-                  style={containerStyle} 
-                  defaultCenter={itemPosition}
-                  defaultZoom={15}
-                  mapId="DEMO_MAP_ID"
-                  gestureHandling={'greedy'}
-                  disableDefaultUI={false}
-                  zoomControl={true}
-                  streetViewControl={false}
-                  mapTypeControl={false}
-                >
-                  {/* Item marker */}
-                  <AdvancedMarker
-                    position={itemPosition}
-                    title={item.name}
+            {/* Map Section */}
+            <div className="map-section">
+              <h5>Location on Map</h5>
+              <div style={{ width: "100%", margin: "0 auto" }}>
+                <APIProvider apiKey="AIzaSyAlx_vvH0P5fepk8bHpzO54syb5heCvJXI">
+                  <Map 
+                    style={containerStyle} 
+                    defaultCenter={itemPosition}
+                    defaultZoom={15}
+                    mapId="DEMO_MAP_ID"
+                    gestureHandling={'greedy'}
+                    disableDefaultUI={false}
+                    zoomControl={true}
+                    streetViewControl={false}
+                    mapTypeControl={false}
                   >
-                    <div style={{
-                      padding: '2px',
-                      backgroundColor: 'white',
-                      borderRadius: '8px',
-                      boxShadow: '0 2px 7px 1px rgba(0,0,0,0.3)',
-                      width: '60px',
-                      height: '60px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden'
-                    }}>
-                    {!imageError ? (
-                      <img
-                        src={processedImageUrl}
-                        alt={item.name}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          borderRadius: '6px',
-                        }}
-                        onError={() => {
-                          console.log('Marker image failed to load, using fallback');
-                          setImageError(true);
-                        }}
-                        crossOrigin="anonymous"
-                      />
-                    ) : (
+                    {/* Item marker */}
+                    <AdvancedMarker
+                      position={itemPosition}
+                      title={item.name}
+                    >
                       <div style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: '#f0f0f0',
+                        padding: '2px',
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 7px 1px rgba(0,0,0,0.3)',
+                        width: '60px',
+                        height: '60px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '12px',
-                        color: '#666'
+                        overflow: 'hidden'
                       }}>
-                        {item.name.substring(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  </AdvancedMarker>
-                </Map>
-              </APIProvider>
+                      {!imageError ? (
+                        <img
+                          src={processedImageUrl}
+                          alt={item.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '6px',
+                          }}
+                          onError={() => {
+                            console.log('Marker image failed to load, using fallback');
+                            setImageError(true);
+                          }}
+                          crossOrigin="anonymous"
+                        />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: '#f0f0f0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          color: '#666'
+                        }}>
+                          {item.name.substring(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    </AdvancedMarker>
+                  </Map>
+                </APIProvider>
+              </div>
             </div>
           </div>
         </div>
