@@ -156,6 +156,7 @@ const addItem = async (formData: FormData) => {
 
 const deleteItem = (id: string) => {
   const abortController = new AbortController();
+  console.log("Deleting item:", id);
   const request = apiClient.delete(`/items/${id}`, {
     signal: abortController.signal,
   });

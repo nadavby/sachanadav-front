@@ -10,20 +10,31 @@ export const useMatch = () => {
   const { currentUser } = useAuth();
 
   const fetchMatches = useCallback(async () => {
-    if (!currentUser?._id) return;
+    if (!currentUser?._id) {
+      console.log('[MATCHES] No user ID, skipping fetch');
+      return;
+    }
     
+    console.log('[MATCHES] Starting fetch for user:', currentUser._id);
     setIsLoading(true);
     setError(null);
 
     const { request, abort } = matchService.getAllByUserId(currentUser._id);
     
     try {
+      console.log('[MATCHES] Making request to backend...');
       const response = await request;
+      console.log('[MATCHES] Response received:', response);
+      console.log('[MATCHES] Response data:', response.data);
+      console.log('[MATCHES] Number of matches:', response.data?.length || 0);
       setMatches(response.data);
     } catch (err) {
-      if (err instanceof CanceledError) return;
-      setError(err.message);
+      if (err instanceof CanceledError) {
+        console.log('[MATCHES] Request was canceled');
+        return;
+      }
       console.error('[MATCHES] Error fetching matches:', err);
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -70,14 +81,17 @@ export const useMatch = () => {
 
   // Initial fetch of matches
   useEffect(() => {
+    console.log('[MATCHES] useEffect triggered, currentUser?._id:', currentUser?._id);
     if (currentUser?._id) {
+      console.log('[MATCHES] Calling fetchMatches...');
       fetchMatches();
     }
   }, [currentUser?._id, fetchMatches]);
 
   // Log when matches change
   useEffect(() => {
-    console.log('[MATCHES] Current matches:', matches);
+    console.log('[MATCHES] Current matches updated:', matches);
+    console.log('[MATCHES] Matches count:', matches.length);
   }, [matches]);
 
   return {
@@ -134,3 +148,31 @@ export const useMatchItems = (itemIds: string[]) => {
 }; 
 
 
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const itemsPromises = memoizedMatchIds.map(async (matchId) => {
+          const { request } = itemService.getItemById(matchId);
+          const response = await request;
+          return response.data;
+        });
+
+        const items = await Promise.all(itemsPromises);
+        setMatchItems(items.filter((item): item is Item => item !== null));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMatchItems();
+  }, [memoizedMatchIds]);
+
+  return {
+    matchItems,
+    isLoading,
+    error
+  };
+}; 
