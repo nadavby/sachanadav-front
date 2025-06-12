@@ -25,21 +25,40 @@
 }
 
 .section-header {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   position: relative;
+  text-align: center;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.section-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 2px;
+  background: linear-gradient(to right, #3498db, #2ecc71);
 }
 
 .section-title {
-  font-size: 1.75rem;
-  font-weight: 600;
+  font-size: 2rem;
+  font-weight: 700;
   color: #2c3e50;
   margin: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5px;
 }
 
 .section-title svg {
   color: #3498db;
+  font-size: 1.75rem;
+  margin-right: 1rem;
+  filter: drop-shadow(0 2px 4px rgba(52, 152, 219, 0.2));
 }
 
 /* Match Cards */
