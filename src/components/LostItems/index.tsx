@@ -191,7 +191,7 @@ const LostItems: FC = () => {
           />
           <button
             className="action-button"
-            onClick={() => navigate('/report')}
+            onClick={() => navigate('/upload-item')}
           >
             <FontAwesomeIcon icon={faPlus} />
             Report Item
