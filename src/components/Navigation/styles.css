@@ -2,44 +2,453 @@
 .navbar {
   padding: 0.75rem 1rem;
   position: relative;
-  z-index: 2000; /* Increased z-index to be above everything */
+  z-index: 2000;
+  background-color: #0d6efd !important;
 }
 
-/* Container layout for the three-part navigation */
+/* Container layout */
 .navbar .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* Ensure logo, notification, and hamburger are all properly sized */
+/* Left section - Brand */
+.navbar-left {
+  flex: 1;
+}
+
 .navbar-brand {
   margin-right: 0;
   font-size: 1.25rem;
+  color: white !important;
+  text-decoration: none;
 }
 
-/* Style the center notification container */
-.notification-center-container {
+/* Center section - Notification */
+.navbar-center {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1;
 }
 
-/* Hamburger button styling */
+/* Right section */
+.navbar-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Hamburger menu styling */
 .navbar-toggler {
-  padding: 0.25rem 0.5rem;
-  border: none;
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   background: transparent;
+  color: white;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.navbar-toggler:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .navbar-toggler:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+}
+
+/* Dropdown menu container */
+.navbar-collapse-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100vh;
+  background-color: #f8f9fa;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 2001; /* Increased to be above navbar */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0; /* Removed padding-top */
+}
+
+.navbar-collapse-container.show {
+  transform: translateX(0);
+}
+
+/* User profile section */
+.user-profile-section {
+  padding: 1.5rem;
+  background-color: #0d6efd;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 500;
+  color: white;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-link:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+/* Menu sections */
+.menu-section {
+  padding: 1rem 0;
+  border-bottom: 1px solid #e9ecef;
+  background-color: white;
+}
+
+.menu-section:last-child {
+  border-bottom: none;
+}
+
+.menu-section-title {
+  padding: 0.5rem 1.5rem;
+  margin: 0;
+  color: #0d6efd;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Navigation items */
+.navbar-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  margin: 0;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1.5rem;
+  color: #212529;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+  background-color: #f8f9fa;
+  color: #0d6efd;
+  border-left-color: #0d6efd;
+}
+
+.nav-link.active {
+  background-color: #e7f1ff;
+  color: #212529;
+  font-weight: 500;
+  border-left-color: #0d6efd;
+}
+
+.nav-link .me-2 {
+  width: 20px;
+  text-align: center;
+  margin-right: 1rem !important;
+}
+
+/* Logout link */
+.logout-link {
+  color: #dc3545 !important;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.logout-link:hover {
+  background-color: #fff5f5 !important;
+  border-left-color: #dc3545;
+}
+
+/* QR Code Modal */
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1999;
+}
+
+.qr-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+  width: 90%;
+  max-width: 400px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.qr-modal .close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+
+.qr-modal .close-button:hover {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: #212529;
+}
+
+.qr-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr-title {
+  width: 100%;
+  text-align: center;
+  padding: 1.5rem;
+  margin: 0;
+  background-color: #0d6efd;
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.qr-description {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 1.5rem 2rem;
+  text-align: center;
+  max-width: 280px;
+}
+
+#qr-code {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin: 0 2rem 1.5rem;
+}
+
+.qr-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  width: 100%;
+  border-top: 1px solid #e9ecef;
+}
+
+.qr-actions button {
+  min-width: 120px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.qr-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-sm.btn-link {
+  color: #0d6efd;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  margin: 0 0 1.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-sm.btn-link:hover {
+  background-color: #e7f1ff;
+  text-decoration: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navbar-collapse-container {
+    width: 100%;
+  }
+
+  .qr-modal {
+    width: 95%;
+  }
+
+  .qr-description {
+    margin: 1rem;
+  }
+
+  #qr-code {
+    margin: 0 1rem 1rem;
+  }
+
+  .qr-actions {
+    padding: 1rem;
+  }
+}
+
+/* Notification styling */
+.notification-button {
+  position: relative;
+  color: white;
+  background: none;
+  border: none;
+  padding: 0.4rem 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  font-weight: bold;
+  border: 2px solid #0d6efd;
+}
+
+/* Icon buttons styling */
+.btn-icon {
+  color: white;
+  background: none;
+  border: none;
+  padding: 0.4rem 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.btn-icon:focus {
   box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
   outline: none;
+}
+
+/* Logout button specific styling */
+.btn-icon.logout-btn {
+  color: #ff4444;
+  margin-left: 0.5rem; /* Add some space before the logout button */
+}
+
+.btn-icon.logout-btn:hover {
+  background-color: rgba(255, 68, 68, 0.2);
+  color: #ff6666;
+}
+
+.btn-icon.logout-btn:focus {
+  box-shadow: 0 0 0 0.25rem rgba(255, 68, 68, 0.25);
+}
+
+/* Separator before logout button */
+.nav-icons-separator {
+  width: 1px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: 0 0.5rem;
+}
+
+/* Notification menu styling */
+.notification-menu {
+  width: 320px !important;
+  max-height: 480px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  border: none !important;
+  margin-top: 0.5rem !important;
 }
 
 /* Animated hamburger icon */
@@ -51,52 +460,15 @@
   transform: rotate(90deg);
 }
 
-/* Collapsible menu container */
-.navbar-collapse-container {
-  position: fixed;
-  top: 56px; /* Height of navbar */
-  left: 0;
-  right: 0;
-  background-color: #0d6efd; /* Match navbar bg-primary color */
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-  z-index: 1000;
-}
-
-.navbar-collapse-container.show {
-  max-height: calc(100vh - 56px);
-  overflow-y: auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Menu items styling */
-.navbar-nav {
-  padding: 0.5rem 1rem;
-}
-
-.nav-item {
-  padding: 0.25rem 0;
-}
-
-.nav-link {
-  padding: 0.75rem 1rem !important;
-  border-radius: 4px;
-  color: white !important;
-}
-
-.nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.nav-link.active {
-  background-color: rgba(255, 255, 255, 0.2);
-  font-weight: bold;
-}
-
-/* Empty space to balance the hamburger button */
-.navbar-toggler-width {
-  width: 56px; /* Same width as hamburger button */
+/* Style the center notification container */
+.notification-center-container {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
 }
 
 /* Center brand and notification bell */
@@ -183,29 +555,6 @@
   outline: none;
 }
 
-/* Notification button styling */
-.notification-button {
-  position: relative;
-}
-
-.notification-badge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background-color: #dc3545;
-  color: white;
-  border-radius: 50%;
-  min-width: 18px;
-  height: 18px;
-  font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  font-weight: bold;
-  border: 2px solid #0d6efd;
-}
-
 /* QR Code Button */
 .btn-qr {
   color: white;
@@ -229,74 +578,6 @@
   outline: none;
 }
 
-/* QR Code Dropdown */
-.qr-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 0.5rem;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  z-index: 1050;
-  min-width: 300px;
-  padding: 1.5rem;
-  text-align: center;
-}
-
-.qr-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.qr-code-container {
-  background-color: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.qr-title {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #2c3e50;
-  margin: 0;
-}
-
-.qr-description {
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin: 0.5rem 0 1rem 0;
-  max-width: 250px;
-}
-
-.qr-actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e9ecef;
-  width: 100%;
-}
-
-.qr-actions button {
-  min-width: 100px;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.qr-actions button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
 /* Test Link Button */
 .btn-link {
   color: #0d6efd;
@@ -315,4 +596,17 @@
 
 .btn-link:focus {
   box-shadow: none;
+}
+
+/* Add a subtle separator before the logout button in the menu */
+.nav-item:last-child {
+  margin-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .logout-link {
+    padding: 1rem 1.5rem;
+  }
 } 

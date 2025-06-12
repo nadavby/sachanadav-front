@@ -275,4 +275,18 @@
   .chat-preview {
     padding: 0.5rem;
   }
+}
+
+.chat-preview-items {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.chat-item-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #e0e0e0;
 } 

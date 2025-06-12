@@ -79,11 +79,10 @@
   margin-top: 0.5rem !important;
   border: none;
   background: white;
-  position: absolute !important;
-  right: 0 !important;
-  left: auto !important;
-  top: 100% !important;
-  transform: none !important;
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  top: 60px !important;
 }
 
 .notification-header {

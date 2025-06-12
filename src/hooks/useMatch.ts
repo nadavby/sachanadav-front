@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import matchService, { IMatch, CanceledError } from '../services/match-service';
 import { useAuth } from './useAuth';
 import { Item } from '../services/item-service';
-import itemService from '../services/item-service';
+import  itemService  from '../services/item-service';
 
 export const useMatch = () => {
   const [matches, setMatches] = useState<IMatch[]>([]);
@@ -110,8 +110,11 @@ export const useMatchItems = (matchIds: string[]) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Memoize matchIds to prevent unnecessary re-renders
-  const memoizedMatchIds = useMemo(() => matchIds, [JSON.stringify(matchIds)]);
+  // Memoize matchIds array using a stable stringification
+  const memoizedMatchIds = useMemo(() => {
+    if (!matchIds || matchIds.length === 0) return [];
+    return [...new Set(matchIds)].sort();
+  }, [matchIds]);
 
   useEffect(() => {
     const fetchMatchItems = async () => {
@@ -120,6 +123,36 @@ export const useMatchItems = (matchIds: string[]) => {
         setIsLoading(false);
         return;
       }
+
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const itemsPromises = memoizedMatchIds.map(async (matchId) => {
+          const { request } = itemService.getItemById(matchId);
+          const response = await request;
+          return response.data;
+        });
+
+        const items = await Promise.all(itemsPromises);
+        setMatchItems(items.filter((item): item is Item => item !== null));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMatchItems();
+  }, [memoizedMatchIds]);
+
+  return {
+    matchItems,
+    isLoading,
+    error
+  };
+}; 
+
 
       setIsLoading(true);
       setError(null);
