@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useCallback, useEffect } from 'react';
 import matchService, { IMatch, CanceledError } from '../services/match-service';
 import { useAuth } from './useAuth';
 import  itemService  from '../services/item-service';
@@ -145,34 +146,4 @@ export const useMatchItems = (itemIds: string[]) => {
   }, [itemIds]);
 
   return { matchItems, isLoading, error };
-}; 
-
-
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const itemsPromises = memoizedMatchIds.map(async (matchId) => {
-          const { request } = itemService.getItemById(matchId);
-          const response = await request;
-          return response.data;
-        });
-
-        const items = await Promise.all(itemsPromises);
-        setMatchItems(items.filter((item): item is Item => item !== null));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMatchItems();
-  }, [memoizedMatchIds]);
-
-  return {
-    matchItems,
-    isLoading,
-    error
-  };
-}; 
+};  

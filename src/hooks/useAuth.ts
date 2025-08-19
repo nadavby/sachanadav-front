@@ -90,6 +90,15 @@ export const useAuth = () => {
     checkAuthState();
   }, [checkAuthState]);
 
+  // Listen for global auth updates (e.g., profile image change) and refresh user data
+  useEffect(() => {
+    const handleAuthUpdated = () => {
+      fetchUserDetails();
+    };
+    window.addEventListener('auth:updated', handleAuthUpdated);
+    return () => window.removeEventListener('auth:updated', handleAuthUpdated);
+  }, [fetchUserDetails]);
+
   return {
     currentUser,
     loading,
