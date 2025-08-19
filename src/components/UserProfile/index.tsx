@@ -5,9 +5,8 @@ import { FC, useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useUserItems } from "../../hooks/useItems";
 import { useMatch,useMatchItems } from "../../hooks/useMatch";
-import { Item } from "../../services/item-service";
+import itemService, { Item } from "../../services/item-service";
 import userService, { IUser } from "../../services/user-service";
-import itemService from "../../services/item-service";
 import defaultAvatar from "../../assets/avatar.png";
 import { Navigate, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -23,9 +22,7 @@ import {
   faCheckCircle,
   faSearch,
   faHandHoldingHeart,
-  faEdit,
   faTrash,
-  faEye,
 } from "@fortawesome/free-solid-svg-icons";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,7 +68,7 @@ const UserProfile: FC = () => {
   const navigate = useNavigate();
   
   // Get user items
-  const { items: Items, isLoading: itemsLoading, error: itemsError } = 
+  const { items: Items, setItems } = 
     useUserItems(currentUser?._id || "");
 
   // Get user matches
@@ -227,6 +224,8 @@ const UserProfile: FC = () => {
         setIsEditing(false);
         
         await updateAuthState();
+        // notify all listeners (e.g., Navigation) to refresh user data/avatar
+        window.dispatchEvent(new Event('auth:updated'));
       } catch (error) {
         console.error("Failed to update user:", error);
         throw new Error("Failed to update user details");
@@ -273,28 +272,21 @@ const UserProfile: FC = () => {
     }
   };
 
-  const handleDeleteItem = async (itemId: string) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
-
+  const handleDeleteItem = async (itemId?: string) => {
+    if (!itemId) return;
+    const confirmed = window.confirm("Are you sure you want to delete this item? This action cannot be undone.");
+    if (!confirmed) return;
     try {
       const { request } = itemService.deleteItem(itemId);
       await request;
-      window.location.reload();
+      setItems((prev) => prev.filter((it) => it._id !== itemId));
+      setMatchesWithItems((prev) => prev.filter((m) => m.item1?._id !== itemId && m.item2?._id !== itemId));
     } catch (error) {
-      console.error("Error deleting item:", error);
+      console.error("Failed to delete item:", error);
+      alert("Failed to delete item. Please try again.");
     }
   };
 
-  const formatDate = (date: Date | string | undefined) => {
-    if (!date) return "N/A";
-    try {
-      const dateObj = date instanceof Date ? date : new Date(date);
-      return dateObj.toLocaleDateString();
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "N/A";
-    }
-  };
 
   const formatLocation = (location: string | Location): string => {
     if (typeof location === 'string') {
@@ -306,7 +298,7 @@ const UserProfile: FC = () => {
   if (!loading && !isAuthenticated) return <Navigate to="/login" />;
   if (!localUser) return <div>Loading...</div>;
 
-  const { ref: profileImageRef, ...profileImageRest } = register("profileImage");
+  
 
   return (
     <div className="profile-container">
@@ -589,6 +581,16 @@ const UserProfile: FC = () => {
                       {item.category || 'Uncategorized'}
                     </div>
                   </div>
+                  <div className="mt-3 d-flex justify-content-end">
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteItem(item._id); }}
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="me-2" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -651,6 +653,16 @@ const UserProfile: FC = () => {
                       <FontAwesomeIcon icon={faTag} className="me-2" />
                       {item.category || 'Uncategorized'}
                     </div>
+                  </div>
+                  <div className="mt-3 d-flex justify-content-end">
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteItem(item._id); }}
+                    >
+                      <FontAwesomeIcon icon={faTrash} className="me-2" />
+                      Delete
+                    </button>
                   </div>
                 </div>
               </div>

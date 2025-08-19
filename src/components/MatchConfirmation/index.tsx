@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
-  faCheckCircle,
   faExclamationTriangle,
-  faComment,
   faEnvelope,
   faPhone,
   faUser
@@ -41,17 +39,7 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
   const [error, setError] = useState<string | null>(null);
   const [confirmStep, setConfirmStep] = useState(1);
 
-  useEffect(() => {
-    if (!matchId) {
-      setError('Missing match ID');
-      setLoading(false);
-      return;
-    }
-
-    fetchMatchAndItems();
-  }, [matchId]);
-
-  const fetchMatchAndItems = async () => {
+  const fetchMatchAndItems = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -94,7 +82,17 @@ const MatchConfirmation: React.FC<MatchConfirmationProps> = (props) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [matchId, currentUser?._id]);
+
+  useEffect(() => {
+    if (!matchId) {
+      setError('Missing match ID');
+      setLoading(false);
+      return;
+    }
+
+    fetchMatchAndItems();
+  }, [matchId, fetchMatchAndItems]);
 
   const handleNextStep = () => {
     if (!otherUserId) {
